@@ -1,133 +1,80 @@
 import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from datetime import datetime
 from urllib.parse import parse_qs, urlparse
+from core.services import MoneyService
 
-DB_PATH = '/home/huyquochuynh009/.openclaw/workspace/money-tracker/expenses.json'
+# --- CONFIG ---
+BASE_DIR = '/home/huyquochuynh009/.openclaw/workspace/money-tracker'
+EXPENSE_PATH = os.path.join(BASE_DIR, 'expenses.json')
+BUDGET_PATH = os.path.join(BASE_DIR, 'budget.json')
+# Fen có thể đổi password ở đây
+APP_PASSWORD = "123" 
 
-def load_data():
-    if not os.path.exists(DB_PATH) or os.stat(DB_PATH).st_size == 0:
-        return []
-    with open(DB_PATH, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except:
-            return []
-
-def save_data(data):
-    with open(DB_PATH, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+service = MoneyService(EXPENSE_PATH, BUDGET_PATH)
 
 class MoneyTrackerHandler(BaseHTTPRequestHandler):
+    def _send_json(self, data, status=200):
+        self.send_response(status)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode('utf-8'))
+
     def do_GET(self):
-        parsed_path = urlparse(self.path)
-        path = parsed_path.path
-        
+        parsed = urlparse(self.path)
+        path = parsed.path
+        params = parse_qs(parsed.query)
+
         if path == '/':
             self.send_response(200)
             self.send_header('Content-type', 'text/html; charset=utf-8')
             self.end_headers()
-            with open('/home/huyquochuynh009/.openclaw/workspace/money-tracker/templates/index.html', 'r') as f:
-                html = f.read()
-            self.wfile.write(html.encode('utf-8'))
-            
+            with open(os.path.join(BASE_DIR, 'templates/index.html'), 'r') as f:
+                self.wfile.write(f.read().encode('utf-8'))
+        
         elif path == '/api/list':
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(load_data()).encode('utf-8'))
+            self._send_json(service.get_expenses())
             
         elif path == '/api/budget':
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            budget_path = '/home/huyquochuynh009/.openclaw/workspace/money-tracker/budget.json'
-            with open(budget_path, 'r', encoding='utf-8') as f:
-                budget = json.load(f)
-            self.wfile.write(json.dumps(budget).encode('utf-8'))
+            self._send_json(service.get_budget())
 
         elif path == '/api/expense/delete':
-            params = parse_qs(parsed_path.query)
             expense_id = int(params.get('id', [0])[0])
-            expenses = load_data()
-            expenses = [e for e in expenses if e['id'] != expense_id]
-            save_data(expenses)
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
-        else:
-            self.send_error(404)
+            if service.delete_expense(expense_id):
+                self._send_json({"status": "success"})
+            else:
+                self._send_json({"status": "error"}, 404)
 
     def do_POST(self):
-        if self.path == '/api/add':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            expenses = load_data()
-            date_str = data.get('date') or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_item = {
-                'id': int(datetime.now().timestamp() * 1000), # Dùng timestamp làm ID để tránh trùng
-                'date': date_str,
-                'amount': int(data.get('amount', 0)),
-                'category': data.get('category', 'Khác'),
-                'note': data.get('note', '')
-            }
-            expenses.append(new_item)
-            save_data(expenses)
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
-            
-        elif self.path == '/api/expense/update':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            expenses = load_data()
-            for e in expenses:
-                if e['id'] == int(data['id']):
-                    e['amount'] = int(data['amount'])
-                    e['category'] = data['category']
-                    e['note'] = data['note']
-                    e['date'] = data['date']
-                    break
-            save_data(expenses)
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+        content_length = int(self.headers['Content-Length'])
+        data = json.loads(self.rfile.read(content_length).decode('utf-8'))
+        path = self.path
 
-        elif self.path == '/api/budget/update':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            new_budget = json.loads(post_data.decode('utf-8'))
-            budget_path = '/home/huyquochuynh009/.openclaw/workspace/money-tracker/budget.json'
-            with open(budget_path, 'w', encoding='utf-8') as f:
-                json.dump(new_budget, f, ensure_ascii=False, indent=4)
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+        if path == '/api/add':
+            item = service.add_expense(
+                amount=int(data.get('amount', 0)),
+                category=data.get('category', 'Khác'),
+                note=data.get('note', ''),
+                date=data.get('date')
+            )
+            self._send_json({"status": "success", "data": item})
 
-        elif self.path == '/api/budget/delete':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            cat_to_delete = json.loads(post_data.decode('utf-8')).get('category')
-            budget_path = '/home/huyquochuynh009/.openclaw/workspace/money-tracker/budget.json'
-            with open(budget_path, 'r', encoding='utf-8') as f:
-                budget = json.load(f)
-            if cat_to_delete in budget:
-                del budget[cat_to_delete]
-                with open(budget_path, 'w', encoding='utf-8') as f:
-                    json.dump(budget, f, ensure_ascii=False, indent=4)
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+        elif path == '/api/expense/update':
+            expense_id = int(data.get('id', 0))
+            if service.update_expense(expense_id, data):
+                self._send_json({"status": "success"})
+            else:
+                self._send_json({"status": "error"}, 404)
+
+        elif path == '/api/budget/update':
+            service.update_budget(data)
+            self._send_json({"status": "success"})
+
+        elif path == '/api/budget/delete':
+            service.delete_budget_category(data.get('category'))
+            self._send_json({"status": "success"})
 
 if __name__ == '__main__':
     server = HTTPServer(('0.0.0.0', 5000), MoneyTrackerHandler)
-    print("Server started at port 5000")
+    print("🚀 Clean Server started at port 5000")
     server.serve_forever()
