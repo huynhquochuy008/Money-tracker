@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoneyPro - Quản lý tài chính</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --sidebar-width: 260px; }
+        body { background-color: #f4f7f6; font-family: 'Inter', system-ui, sans-serif; }
+        .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; background: #111827; color: white; z-index: 1000; transition: 0.3s; }
+        .main-content { margin-left: var(--sidebar-width); padding: 30px; transition: 0.3s; }
+        .nav-link { color: #9ca3af; border-radius: 10px; margin: 4px 16px; padding: 12px 16px; transition: 0.2s; }
+        .nav-link:hover, .nav-link.active { background: #1f2937; color: #3b82f6; }
+        .card { border-radius: 20px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.03); background: white; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .progress { height: 8px; border-radius: 10px; background-color: #e5e7eb; }
+        .btn-action { padding: 4px 8px; font-size: 0.85rem; }
+        @media (max-width: 768px) { .sidebar { left: -260px; } .main-content { margin-left: 0; padding: 15px; } .sidebar.show { left: 0; } }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar shadow-lg" id="sidebar">
+        <div class="p-4 border-bottom border-dark">
+            <h4 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-wallet2 text-primary me-2"></i> MoneyPro</h4>
+        </div>
+        <nav class="nav flex-column mt-4">
+            <a class="nav-link active" href="#" onclick="showPage('dashboard')"><i class="bi bi-grid-1x2-fill me-2"></i> Tổng quan</a>
+            <a class="nav-link" href="#" onclick="showPage('history')"><i class="bi bi-clock-history me-2"></i> Lịch sử</a>
+            <a class="nav-link" href="#" onclick="showPage('settings')"><i class="bi bi-sliders me-2"></i> Thiết lập ngân sách</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4 d-md-none">
+            <h4 class="fw-bold mb-0">MoneyPro</h4>
+            <button class="btn btn-outline-dark" onclick="document.getElementById('sidebar').classList.toggle('show')"><i class="bi bi-list"></i></button>
+        </div>
+
+        <!-- PAGE: DASHBOARD -->
+        <div id="dashboard" class="page active">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold">Báo cáo chi tiêu</h3>
+                <div class="d-flex gap-2">
+                    <select id="monthFilter" class="form-select border-0 shadow-sm w-auto" onchange="renderAll()"></select>
+                    <button class="btn btn-primary shadow" data-bs-toggle="modal" data-bs-target="#expenseModal" onclick="prepareAdd()">+ Nhập chi tiêu</button>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card p-4 bg-primary text-white mb-4 shadow-primary">
+                        <small class="opacity-75">Tháng này đã tiêu</small>
+                        <h2 id="total-spent" class="fw-bold mt-1 mb-0">0đ</h2>
+                    </div>
+                    <div class="card p-4">
+                        <h6 class="fw-bold mb-4">Theo dõi định mức</h6>
+                        <div id="budget-summary"></div>
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    <div class="card p-4">
+                        <div class="row g-4">
+                            <div class="col-md-6 text-center"><h6>Phân bổ hạng mục</h6><div class="chart-container"><canvas id="catChart"></canvas></div></div>
+                            <div class="col-md-6 text-center"><h6>Xu hướng chi tiêu</h6><div class="chart-container"><canvas id="dayChart"></canvas></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: HISTORY -->
+        <div id="history" class="page">
+            <h3 class="fw-bold mb-4">Lịch sử giao dịch chi tiết</h3>
+            <div class="card overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr><th>Ngày</th><th>Hạng mục</th><th>Ghi chú</th><th class="text-end">Số tiền</th><th class="text-center">Thao tác</th></tr>
+                        </thead>
+                        <tbody id="history-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: SETTINGS -->
+        <div id="settings" class="page">
+            <h3 class="fw-bold mb-4">Quản lý ngân sách</h3>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card p-4">
+                        <form id="budget-form">
+                            <div id="budget-inputs" class="row g-3"></div>
+                            <div class="mt-4 pt-3 border-top">
+                                <button type="submit" id="saveBudgetBtn" class="btn btn-primary px-4">Lưu cấu hình</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-4">
+                        <h6>Thêm hạng mục mới</h6>
+                        <div class="mb-3">
+                            <label class="small text-muted">Tên hạng mục</label>
+                            <input type="text" id="newCatName" class="form-control" placeholder="Ví dụ: Đám cưới">
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-muted">Hạn mức (đ)</label>
+                            <input type="text" id="newCatLimit" class="form-control" placeholder="Ví dụ: 2m, 500k">
+                        </div>
+                        <button class="btn btn-outline-primary w-100" onclick="addCategory()">+ Thêm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Form Expense -->
+    <div class="modal fade" id="expenseModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
+            <div class="modal-header border-0"><h5 class="modal-title fw-bold" id="expenseModalTitle">Nhập chi tiêu</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="expenseForm">
+                    <input type="hidden" name="id" id="editId">
+                    <div class="mb-3"><label class="small fw-bold">Số tiền (VNĐ)</label><input type="text" name="amount" id="formAmount" class="form-control form-control-lg border-primary text-primary fw-bold" placeholder="Ví dụ: 50k, 1.5m, 150000" required></div>
+                    <div class="mb-3"><label class="small fw-bold">Hạng mục</label><select name="category" id="formCat" class="form-select"></select></div>
+                    <div class="mb-3"><label class="small fw-bold">Ngày</label><input type="date" name="date" id="formDate" class="form-control"></div>
+                    <div class="mb-3"><label class="small fw-bold">Ghi chú</label><input type="text" name="note" id="formNote" class="form-control" placeholder="Ví dụ: Ăn phở"></div>
+                    <button type="submit" id="expenseSubmitBtn" class="btn btn-primary w-100 py-2 fw-bold mt-2">Lưu thông tin</button>
+                </form>
+            </div>
+        </div></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allData = []; let budgets = {}; let charts = {};
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(l => {
+                l.classList.remove('active');
+                if(l.getAttribute('onclick').includes(pageId)) l.classList.add('active');
+            });
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('show');
+            if (pageId === 'dashboard') renderAll();
+        }
+
+        async function init() {
+            const [eRes, bRes] = await Promise.all([fetch('/api/list'), fetch('/api/budget')]);
+            allData = await eRes.json();
+            budgets = await bRes.json();
+            
+            const months = [...new Set(allData.map(d => d.date.substring(0, 7)))].sort().reverse();
+            const curr = new Date().toISOString().substring(0, 7);
+            if(!months.includes(curr)) months.unshift(curr);
+            document.getElementById('monthFilter').innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+            
+            // Rebuild Settings inputs
+            const inputs = document.getElementById('budget-inputs');
+            inputs.innerHTML = Object.entries(budgets).map(([k, v]) => `
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 position-relative">
+                        <label class="form-label small fw-bold mb-1">${k}</label>
+                        <button type="button" class="btn btn-link text-danger position-absolute top-0 end-0 mt-2 me-1 p-1" onclick="deleteCategory('${k}')"><i class="bi bi-x-circle"></i></button>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control budget-input" data-cat="${k}" value="${v}">
+                            <span class="input-group-text">đ</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const catOptions = Object.keys(budgets).map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Khác">Khác</option>';
+            document.getElementById('formCat').innerHTML = catOptions;
+            
+            renderAll();
+        }
+
+        function renderAll() {
+            const month = document.getElementById('monthFilter').value;
+            const filtered = allData.filter(d => d.date.startsWith(month));
+            let total = 0; const catSum = {}; const daySum = {};
+
+            const rows = filtered.slice().sort((a,b) => b.date.localeCompare(a.date)).map(item => {
+                total += (item.amount || 0);
+                catSum[item.category] = (catSum[item.category] || 0) + item.amount;
+                const d = item.date.split(' ')[0]; daySum[d] = (daySum[d] || 0) + item.amount;
+                
+                const tr = `<tr>
+                    <td class="small">${d}</td>
+                    <td><span class="badge bg-light text-dark border-0 shadow-sm">${item.category}</span></td>
+                    <td class="small text-muted">${item.note}</td>
+                    <td class="text-end fw-bold text-dark">${(item.amount||0).toLocaleString()}đ</td>
+                    <td class="text-center">
+                        <div class="btn-group">
+                            <button class="btn btn-outline-secondary btn-action border-0" onclick="prepareEdit(${item.id})"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-outline-danger btn-action border-0" onclick="deleteExpense(${item.id})"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+                return tr;
+            });
+
+            document.getElementById('history-table').innerHTML = rows.join('');
+            document.getElementById('total-spent').innerText = total.toLocaleString() + 'đ';
+
+            // Dashboard Budget Summary
+            document.getElementById('budget-summary').innerHTML = Object.entries(budgets).map(([cat, lim]) => {
+                const s = catSum[cat] || 0; const p = Math.min((s/lim)*100, 100);
+                const c = p > 90 ? 'bg-danger' : (p > 75 ? 'bg-warning' : 'bg-success');
+                return `<div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1"><span class="fw-semibold">${cat}</span><span class="text-muted">${Math.round(p)}%</span></div>
+                    <div class="progress mb-1"><div class="progress-bar ${c}" style="width: ${p}%"></div></div>
+                    <div class="d-flex justify-content-between x-small text-muted" style="font-size: 0.7rem"><span>Đã tiêu: ${s.toLocaleString()}</span><span>Còn: ${(lim-s).toLocaleString()}</span></div>
+                </div>`;
+            }).join('');
+
+            updateCharts(catSum, daySum);
+        }
+
+        function updateCharts(cat, day) {
+            if(charts.c) charts.c.destroy(); if(charts.d) charts.d.destroy();
+            const ctxC = document.getElementById('catChart');
+            const ctxD = document.getElementById('dayChart');
+            if(!ctxC || !ctxD) return;
+
+            // Chart Phân loại (Doughnut) - Tối ưu màu sắc và legend
+            charts.c = new Chart(ctxC, {
+                type: 'doughnut', 
+                data: { 
+                    labels: Object.keys(cat), 
+                    datasets: [{ 
+                        data: Object.values(cat), 
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#ec4899', '#8b5cf6', '#06b6d4'],
+                        borderWidth: 2,
+                        hoverOffset: 15
+                    }]
+                },
+                options: { 
+                    plugins: { 
+                        legend: { 
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                font: { size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    let val = context.parsed || context.raw || 0;
+                                    label += new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                                    return label;
+                                }
+                            }
+                        }
+                    }, 
+                    cutout: '75%',
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Chart Xu hướng (Line) - Tối ưu trục Y và tooltip
+            const days = Object.keys(day).sort();
+            charts.d = new Chart(ctxD, {
+                type: 'line', 
+                data: { 
+                    labels: days.map(x=>x.split('-')[2]), 
+                    datasets: [{ 
+                        label: 'Số tiền chi (đ)', 
+                        data: days.map(x=>day[x]), 
+                        borderColor: '#3b82f6', 
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#3b82f6',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.4, 
+                        fill: true
+                    }]
+                },
+                options: { 
+                    scales: { 
+                        y: { 
+                            display: true,
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                            ticks: {
+                                callback: function(value) {
+                                    if (value >= 1000000) return (value / 1000000) + 'M';
+                                    if (value >= 1000) return (value / 1000) + 'k';
+                                    return value;
+                                }
+                            }
+                        }, 
+                        x: { 
+                            grid: { display: false },
+                            title: { display: true, text: 'Ngày trong tháng', font: { size: 10 } }
+                        } 
+                    }, 
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1f2937',
+                            padding: 12,
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 13 },
+                            callbacks: {
+                                label: function(context) {
+                                    let val = context.parsed.y || context.raw || 0;
+                                    return 'Chi tiêu: ' + val.toLocaleString() + 'đ';
+                                }
+                            }
+                        }
+                    },
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Expense Actions
+        function prepareAdd() {
+            document.getElementById('expenseModalTitle').innerText = 'Nhập chi tiêu';
+            document.getElementById('expenseForm').reset();
+            document.getElementById('editId').value = '';
+            document.getElementById('formDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        function prepareEdit(id) {
+            const item = allData.find(e => e.id == id);
+            if(!item) return;
+            document.getElementById('expenseModalTitle').innerText = 'Chỉnh sửa giao dịch';
+            document.getElementById('editId').value = item.id;
+            document.getElementById('formAmount').value = item.amount;
+            document.getElementById('formCat').value = item.category;
+            document.getElementById('formDate').value = item.date.split(' ')[0];
+            document.getElementById('formNote').value = item.note;
+            new bootstrap.Modal(document.getElementById('expenseModal')).show();
+        }
+
+        async function deleteExpense(id) {
+            if(!confirm('Bạn có chắc chắn muốn xoá khoản chi này?')) return;
+            const res = await fetch(`/api/expense/delete?id=${id}`);
+            if(res.ok) await init();
+        }
+
+        function parseAmount(input) {
+            if (input === null || input === undefined) return 0;
+            let val = input.toString().toLowerCase().replace(/,/g, '').trim();
+            if (val.endsWith('k')) {
+                return Math.floor(parseFloat(val.slice(0, -1)) * 1000);
+            } else if (val.endsWith('m')) {
+                return Math.floor(parseFloat(val.slice(0, -1)) * 1000000);
+            }
+            return Math.floor(parseFloat(val)) || 0;
+        }
+
+        document.getElementById('expenseForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('expenseSubmitBtn');
+            btn.disabled = true;
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Xử lý k và m cho số tiền
+            data.amount = parseAmount(data.amount);
+            
+            if (isNaN(data.amount)) {
+                alert('Số tiền không hợp lệ!');
+                btn.disabled = false;
+                return;
+            }
+
+            const endpoint = data.id ? '/api/expense/update' : '/api/add';
+            const res = await fetch(endpoint, { method: 'POST', body: JSON.stringify(data) });
+            if(res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
+                await init();
+            }
+            btn.disabled = false;
+        };
+
+        // Budget Actions
+        async function deleteCategory(cat) {
+            if(!confirm(`Xoá hạng mục "${cat}" khỏi ngân sách?`)) return;
+            const res = await fetch('/api/budget/delete', { method: 'POST', body: JSON.stringify({category: cat}) });
+            if(res.ok) await init();
+        }
+
+        async function addCategory() {
+            const name = document.getElementById('newCatName').value;
+            const limitRaw = document.getElementById('newCatLimit').value;
+            if(!name || !limitRaw) return alert('Nhập đủ tên và hạn mức!');
+            const limit = parseAmount(limitRaw);
+            if(isNaN(limit)) return alert('Hạn mức không hợp lệ!');
+            budgets[name] = limit;
+            const res = await fetch('/api/budget/update', { method: 'POST', body: JSON.stringify(budgets) });
+            if(res.ok) {
+                document.getElementById('newCatName').value = '';
+                document.getElementById('newCatLimit').value = '';
+                await init();
+            }
+        }
+
+        document.getElementById('budget-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveBudgetBtn');
+            btn.disabled = true;
+            const newB = {};
+            document.querySelectorAll('.budget-input').forEach(i => {
+                const val = parseAmount(i.value);
+                if (!isNaN(val)) newB[i.dataset.cat] = val;
+            });
+            const res = await fetch('/api/budget/update', { method: 'POST', body: JSON.stringify(newB) });
+            if(res.ok) {
+                budgets = newB;
+                alert('Cấu hình đã được lưu!');
+                renderAll();
+            }
+            btn.disabled = false;
+        };
+
+        init();
+    </script>
+</body>
+</html>
