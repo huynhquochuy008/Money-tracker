@@ -1,0 +1,3 @@
+# Dự án hiện tại chỉ sử dụng Python Standard Library.
+# Không cần cài đặt thư viện ngoài.
+# Chạy trực tiếp bằng: python3 server.py
