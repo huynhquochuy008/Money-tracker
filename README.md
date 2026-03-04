@@ -4,59 +4,65 @@
 
 ## ✨ Tính năng nổi bật
 - **Giao diện Glassmorphism:** Trải nghiệm người dùng cao cấp với hiệu ứng mờ kính và biểu đồ tương tác cao.
+- **Smart Dashboard (New):**
+    - **Summary Cards:** Theo dõi tổng chi tiêu theo Ngày, Tuần, Tháng và Năm ngay lập tức.
+    - **Daily Spending:** Bảng chi tiết chi tiêu trong ngày với tính năng cuộn mượt mà.
+    - **Reorganized Layout:** Ưu tiên thông tin quan trọng nhất, biểu đồ phân tích được chuyển xuống dưới để có cái nhìn tổng quát hơn.
 - **Supabase Cloud Storage:** Lưu trữ dữ liệu an toàn trên PostgreSQL thay vì file JSON cục bộ.
 - **Tự động Đồng bộ (Auto Sync):** Tự động phát hiện và import dữ liệu từ `expenses.json` và `budget.json` vào database khi khởi động.
 - **Quản lý Ngân sách:** Thiết lập hạn mức chi tiêu cho từng hạng mục và theo dõi tiến độ theo thời gian thực.
 - **Smart Input:** Hỗ trợ nhập liệu nhanh với các hậu tố `k` (ngàn) và `m` (triệu), ví dụ: `1.2m`, `50k`.
 - **Remote Access:** Hỗ trợ tunnel qua LocalTunnel để truy cập ứng dụng từ bất kỳ đâu.
 
-## 🚀 Kiến trúc dự án
-- `app.py`: Entry point của ứng dụng (Flask Server).
-- `core/supabase_storage.py`: Lớp quản lý dữ liệu tương tác với Supabase API.
-- `core/services.py`: Business logic Layer xử lý nghiệp vụ tài chính.
-- `core/models/`: Định nghĩa các Pydantic models (`Expense`, `Budget`, `UserProfile`).
-- `templates/index.html`: Giao diện người dùng duy nhất (Single Page Application).
+## 🚀 Cấu trúc dự án (Monorepo)
+Dự án được phân chia rõ ràng giữa Backend và Frontend:
 
-## 🛠 Cài đặt & Chạy
+### Backend (Flask)
+- `backend/app.py`: Entry point của API server.
+- `backend/core/services.py`: Xử lý logic nghiệp vụ và tính toán tổng hợp (Summary).
+- `backend/core/supabase_storage.py`: Lớp giao tiếp với Supabase.
+- `backend/tests/`: Hệ thống unit test và integration test.
 
-### 1. Yêu cầu hệ thống
-- Python 3.10+
-- Tài khoản [Supabase](https://supabase.com/)
+### Frontend (React + Vite)
+- `frontend/src/App.jsx`: Quản lý trạng thái ứng dụng và điều hướng.
+- `frontend/src/components/Dashboard.jsx`: Giao diện Dashboard mới với các thẻ tổng hợp và bảng chi tiêu.
+- `frontend/src/index.css`: Hệ thống thiết kế (Design System) Premium.
+- `frontend/src/api/moneyApi.js`: Client kết nối với Backend API.
 
-### 2. Thiết lập môi trường
-1. Clone dự án:
-   ```bash
-   git clone https://github.com/huynhquochuynh008/Money-tracker.git
-   cd Money-tracker
-   ```
-2. Tạo Virtual Environment và cài đặt dependencies:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-3. Cấu hình `.env`:
-   Tạo file `.env` từ mẫu sau:
-   ```text
-   SUPABASE_URL="URL_CUA_BAN"
-   SUPABASE_KEY="KEY_CUA_BAN"
-   SUPABASE_USER_ID="UUID_USER_CUA_BAN"
-   ```
+## 🛠 Cài đặt & Chạy nhanh
 
-### 3. Khởi tạo Database
-Copy nội dung trong `init.sql` và chạy trong **Supabase SQL Editor** để tạo các bảng cần thiết.
+Dự án sử dụng **Makefile** để tự động hóa các tác vụ.
 
-### 4. Chạy ứng dụng
+### 1. Cài đặt toàn bộ
 ```bash
-python3 app.py
+make install
 ```
-Truy cập tại: `http://localhost:5000`
 
-## 📡 Truy cập từ xa (Tunnel)
-Nếu bạn chạy trên server từ xa, bạn có thể mở tunnel:
+### 2. Chạy ứng dụng (Cả Backend & Frontend)
 ```bash
-npm install -g localtunnel
-lt --port 5000
+make run
+```
+- Backend chạy tại: `http://localhost:5001`
+- Frontend chạy tại: `http://localhost:5173`
+
+### 3. Kiểm thử
+```bash
+make test          # Chạy tất cả test
+make test-backend  # Chỉ chạy test backend
+make test-frontend # Chỉ chạy test frontend
+```
+
+### 4. Các lệnh khác
+- `make help`: Hiển thị tất cả các lệnh hỗ trợ.
+- `make clean`: Dọn dẹp các tệp tạm thời và virtual environment.
+
+## 📡 Cấu hình .env
+Tạo file `.env` ở thư mục gốc:
+```text
+SUPABASE_URL="URL_CUA_BAN"
+SUPABASE_KEY="KEY_CUA_BAN"
+SUPABASE_USER_ID="UUID_USER_CUA_BAN"
+ALLOWED_ORIGINS="http://localhost:5173"
 ```
 
 ---
