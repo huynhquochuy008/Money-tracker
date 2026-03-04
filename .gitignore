@@ -7,3 +7,4 @@ __pycache__/
 EOF
 venv
 node_modules
+.env
