@@ -10,7 +10,7 @@
  * @param {string}   props.userEmail     - logged-in user's email display
  * @param {boolean}  props.mobileOpen    - whether sidebar is open on mobile
  */
-export default function Sidebar({ activePage, onNavigate, onLogout, userEmail, mobileOpen }) {
+export default function Sidebar({ activePage, onNavigate, userEmail, mobileOpen }) {
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
         { id: 'history', label: 'Transactions', icon: '☰' },
@@ -48,11 +48,6 @@ export default function Sidebar({ activePage, onNavigate, onLogout, userEmail, m
                     {userEmail || 'User'}
                 </p>
             </div>
-
-            {/* Logout */}
-            <button className="nav-link-item danger" onClick={onLogout} style={{ marginTop: '0.75rem' }}>
-                <span>⇥</span> Sign out
-            </button>
         </aside>
     );
 }

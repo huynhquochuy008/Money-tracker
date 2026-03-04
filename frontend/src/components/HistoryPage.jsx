@@ -32,8 +32,8 @@ export default function HistoryPage({ expenses, onEdit, onRefresh }) {
                     <p>No transactions this month.</p>
                 </div>
             ) : (
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="table-custom">
+                <div className="table-responsive">
+                    <table className="table-custom mobile-stack">
                         <tbody>
                             {sorted.map((item) => {
                                 const d = (item.date || '').split(' ')[0];
@@ -50,13 +50,13 @@ export default function HistoryPage({ expenses, onEdit, onRefresh }) {
                                         </td>
                                         {/* Note */}
                                         <td>
-                                            <span style={{ fontWeight: 500, color: '#cbd5e1' }}>{item.note || '—'}</span>
+                                            <span style={{ fontWeight: 600, color: 'var(--text-soft)' }}>{item.note || '—'}</span>
                                         </td>
                                         {/* Amount */}
                                         <td style={{ width: '22%', textAlign: 'right' }}>
-                                            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9' }}>
+                                            <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)' }}>
                                                 {(item.amount || 0).toLocaleString()}
-                                                <span style={{ fontSize: '0.78rem', opacity: 0.5, marginLeft: '2px' }}>đ</span>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '4px' }}>đ</span>
                                             </span>
                                         </td>
                                         {/* Actions */}

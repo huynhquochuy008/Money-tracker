@@ -5,3 +5,5 @@ __pycache__/
 *.pyd
 .DS_Store
 EOF
+venv
+node_modules

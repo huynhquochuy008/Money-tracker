@@ -89,64 +89,84 @@ def sync_local_data():
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
-@app.route("/api/auth/signup", methods=["POST"])
-def signup():
-    """Register a new user with email + password."""
-    data = request.json or {}
-    email = data.get("email")
-    password = data.get("password")
-    try:
-        res = storage.client.auth.sign_up({"email": email, "password": password})
-        return jsonify({
-            "status": "success",
-            "user": res.user.to_dict() if res.user else None,
-        })
-    except Exception as exc:
-        import traceback
-        print(f"❌ Signup error:\n{traceback.format_exc()}")
-        return jsonify({"status": "error", "message": str(exc)}), 400
+# @app.route("/api/auth/signup", methods=["POST"])
+# def signup():
+#     """Register a new user with email + password."""
+#     data = request.json or {}
+#     email = data.get("email")
+#     password = data.get("password")
+#     try:
+#         res = storage.client.auth.sign_up({"email": email, "password": password})
+#         
+#         # Ensure profile exists immediately
+#         storage.ensure_profile()
+#         
+#         user_data = None
+#         if res.user:
+#             user_data = {
+#                 "id": res.user.id,
+#                 "email": res.user.email,
+#                 "created_at": res.user.created_at,
+#             }
+#         return jsonify({
+#             "status": "success",
+#             "user": user_data,
+#         })
+#     except Exception as exc:
+#         import traceback
+#         print(f"❌ Signup error:\n{traceback.format_exc()}")
+#         return jsonify({"status": "error", "message": str(exc)}), 400
 
 
-@app.route("/api/auth/login", methods=["POST"])
-def login():
-    """Authenticate a user with email + password, return session."""
-    data = request.json or {}
-    email = data.get("email")
-    password = data.get("password")
-    try:
-        res = storage.client.auth.sign_in_with_password(
-            {"email": email, "password": password}
-        )
-        return jsonify({
-            "status": "success",
-            "session": res.session.to_dict() if res.session else None,
-        })
-    except Exception as exc:
-        print(f"❌ Login error: {exc}")
-        return jsonify({"status": "error", "message": str(exc)}), 401
+# @app.route("/api/auth/login", methods=["POST"])
+# def login():
+#     """Authenticate a user with email + password, return session."""
+#     data = request.json or {}
+#     email = data.get("email")
+#     password = data.get("password")
+#     try:
+#         res = storage.client.auth.sign_in_with_password(
+#             {"email": email, "password": password}
+#         )
+#         
+#         # Ensure profile exists immediately
+#         storage.ensure_profile()
+#         
+#         session_data = None
+#         if res.session:
+#             session_data = {
+#                 "access_token": res.session.access_token,
+#                 "refresh_token": res.session.refresh_token,
+#                 "expires_in": res.session.expires_in,
+#                 "token_type": res.session.token_type,
+#                 "user": {
+#                     "id": res.session.user.id,
+#                     "email": res.session.user.email,
+#                 }
+#             }
+#         return jsonify({
+#             "status": "success",
+#             "session": session_data,
+#         })
+#     except Exception as exc:
+#         print(f"❌ Login error: {exc}")
+#         return jsonify({"status": "error", "message": str(exc)}), 401
 
 
 @app.route("/api/auth/session", methods=["GET", "DELETE"])
 def session_handler():
-    """GET — check current session; DELETE — log out."""
+    """Hardcoded to always return authenticated status for No-Auth mode."""
     if request.method == "GET":
-        try:
-            res = storage.client.auth.get_user()
-            if res.user:
-                return jsonify({
-                    "status": "authenticated",
-                    "user": res.user.to_dict(),
-                })
-        except Exception:
-            pass
-        return jsonify({"status": "unauthenticated"}), 401
+        return jsonify({
+            "status": "authenticated",
+            "user": {
+                "id": os.getenv("SUPABASE_USER_ID"),
+                "email": "demo@moneypro.ai",
+            },
+        })
 
     if request.method == "DELETE":
-        try:
-            storage.client.auth.sign_out()
-            return jsonify({"status": "success", "message": "Logged out"})
-        except Exception as exc:
-            return jsonify({"status": "error", "message": str(exc)}), 500
+        return jsonify({"status": "success", "message": "Logged out (mock)"})
 
     return jsonify({"status": "error", "message": "Method not allowed"}), 405
 
@@ -159,6 +179,12 @@ def get_expenses():
     """Return all expenses, optionally filtered by month (YYYY-MM)."""
     month = request.args.get("month")
     return jsonify(service.get_expenses(month))
+
+
+@app.route("/api/summary")
+def get_summary():
+    """Return aggregated spending for day, week, month, year."""
+    return jsonify(service.get_summary())
 
 
 @app.route("/api/add", methods=["POST"])
@@ -234,4 +260,4 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"⚠️  Startup error: {exc}")
 
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 
 class MoneyService:
@@ -39,3 +39,49 @@ class MoneyService:
 
     def delete_budget_category(self, category: str):
         self.storage.delete_budget_category(category)
+
+    # --- SUMMARY OPS ---
+    def get_summary(self) -> Dict[str, int]:
+        """
+        Calculate summary totals for day, week, month, and year.
+        Periods are calculated relative to the local time.
+        """
+        now = datetime.now()
+        today_str = now.strftime("%Y-%m-%d")
+        month_str = now.strftime("%Y-%m")
+        year_str = now.strftime("%Y")
+
+        # Start of the week (Monday)
+        start_of_week = now - timedelta(days=now.weekday())
+        start_of_week_str = start_of_week.strftime("%Y-%m-%d")
+
+        # Fetch all expenses for the current year to calculate all totals
+        all_expenses = self.storage.get_expenses(year_str)
+
+        summary = {
+            "day": 0,
+            "week": 0,
+            "month": 0,
+            "year": 0
+        }
+
+        for exp in all_expenses:
+            amount = exp.get("amount", 0)
+            date_str = exp.get("date", "")
+            
+            # Year total (already filtered by storage)
+            summary["year"] += amount
+            
+            # Month total
+            if date_str.startswith(month_str):
+                summary["month"] += amount
+            
+            # Day total
+            if date_str.startswith(today_str):
+                summary["day"] += amount
+                
+            # Week total
+            if date_str >= start_of_week_str:
+                summary["week"] += amount
+
+        return summary

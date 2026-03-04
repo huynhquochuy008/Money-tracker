@@ -10,7 +10,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authApi, expenseApi, budgetApi } from './api/moneyApi';
 
-import AuthOverlay from './components/AuthOverlay';
+// import AuthOverlay from './components/AuthOverlay';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import HistoryPage from './components/HistoryPage';
@@ -19,14 +19,16 @@ import ExpenseModal from './components/ExpenseModal';
 
 export default function App() {
   // ── Auth state ──────────────────────────────────────────
-  const [authenticated, setAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
+  // ── Auth state ──────────────────────────────────────────
+  const [authenticated, setAuthenticated] = useState(true);
+  const [userEmail, setUserEmail] = useState('demo@moneypro.ai');
 
   // ── Data state ──────────────────────────────────────────
   const [expenses, setExpenses] = useState([]);
   const [budgets, setBudgets] = useState({});
   const [months, setMonths] = useState([]);
   const [month, setMonth] = useState('');
+  const [summary, setSummary] = useState({ day: 0, week: 0, month: 0, year: 0 });
 
   // ── UI state ────────────────────────────────────────────
   const [page, setPage] = useState('dashboard');
@@ -37,15 +39,17 @@ export default function App() {
   // ── Load data from API ───────────────────────────────────
   const loadData = useCallback(async () => {
     try {
-      const [allExpenses, budget] = await Promise.all([
+      const [allExpenses, budget, summaryData] = await Promise.all([
         expenseApi.list(),
         budgetApi.get(),
+        expenseApi.getSummary(),
       ]);
-      setExpenses(allExpenses);
-      setBudgets(budget);
+      setExpenses(allExpenses || []);
+      setBudgets(budget || {});
+      setSummary(summaryData || { day: 0, week: 0, month: 0, year: 0 });
 
       const currentMonth = new Date().toISOString().substring(0, 7);
-      const allMonths = [...new Set(allExpenses.map((e) => e.date.substring(0, 7)))];
+      const allMonths = [...new Set((allExpenses || []).map((e) => e.date.substring(0, 7)))];
       if (!allMonths.includes(currentMonth)) allMonths.push(currentMonth);
       const sorted = allMonths.sort().reverse();
       setMonths(sorted);
@@ -55,15 +59,9 @@ export default function App() {
     }
   }, []);
 
-  // ── Check session on mount ───────────────────────────────
+  // ── Load on mount (No-Auth) ──────────────────────────────
   useEffect(() => {
-    authApi.session()
-      .then((data) => {
-        setAuthenticated(true);
-        setUserEmail(data.user?.email || '');
-        loadData();
-      })
-      .catch(() => setAuthenticated(false));
+    loadData();
   }, [loadData]);
 
   // ── Handlers ────────────────────────────────────────────
@@ -140,6 +138,7 @@ export default function App() {
           <Dashboard
             expenses={filtered}
             budgets={budgets}
+            summary={summary}
             month={month}
             months={months}
             onMonthChange={setMonth}

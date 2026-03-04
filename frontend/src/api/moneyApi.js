@@ -50,6 +50,9 @@ export const expenseApi = {
     /** Fetch all expenses, optionally filtered by month (YYYY-MM) */
     list: (month) => get(`/list${month ? `?month=${month}` : ''}`),
 
+    /** Fetch summary totals (day, week, month, year) */
+    getSummary: () => get('/summary'),
+
     /** Add a new expense */
     add: (amount, category, note, date) =>
         post('/add', { amount, category, note, date }),

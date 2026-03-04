@@ -80,9 +80,9 @@ export default function BudgetPage({ budgets, onRefresh }) {
 
             {error && <div className="auth-alert" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem', alignItems: 'start' }}>
+            <div className="budget-grid">
                 {/* Existing categories */}
-                <div className="glass-card" style={{ padding: '2rem' }}>
+                <div className="glass-card budget-list-card">
                     <form onSubmit={handleSave}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
                             {Object.entries(budgets).map(([cat]) => (
@@ -95,16 +95,16 @@ export default function BudgetPage({ budgets, onRefresh }) {
                                     >
                                         🗑
                                     </button>
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.75rem', color: '#cbd5e1' }}>{cat}</label>
+                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--text-main)' }}>{cat}</label>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <input
                                             type="text"
                                             className="modal-input"
-                                            style={{ fontSize: '1.5rem', fontWeight: 700, color: '#818cf8' }}
+                                            style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}
                                             value={limits[cat] ?? budgets[cat]}
                                             onChange={(e) => setLimits((prev) => ({ ...prev, [cat]: e.target.value }))}
                                         />
-                                        <span style={{ color: '#64748b' }}>đ</span>
+                                        <span style={{ color: 'var(--text-soft)', fontWeight: 600, marginLeft: '0.5rem' }}>đ</span>
                                     </div>
                                 </div>
                             ))}
@@ -122,10 +122,10 @@ export default function BudgetPage({ budgets, onRefresh }) {
                 </div>
 
                 {/* Add new category */}
-                <div className="glass-card" style={{ padding: '1.75rem' }}>
-                    <h3 style={{ marginBottom: '1.25rem', fontSize: '1.1rem', color: '#f1f5f9' }}>New Category</h3>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', color: '#64748b', fontSize: '0.8rem', marginBottom: '0.4rem' }}>Category Name</label>
+                <div className="glass-card" style={{ padding: '2rem' }}>
+                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)' }}>New Category</h3>
+                    <div style={{ marginBottom: '1.25rem' }}>
+                        <label style={{ display: 'block', color: 'var(--text-soft)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.5rem' }}>Category Name</label>
                         <input
                             id="newCatName"
                             type="text"
@@ -135,9 +135,9 @@ export default function BudgetPage({ budgets, onRefresh }) {
                             onChange={(e) => setNewName(e.target.value)}
                         />
                     </div>
-                    <div style={{ marginBottom: '1.25rem' }}>
-                        <label style={{ display: 'block', color: '#64748b', fontSize: '0.8rem', marginBottom: '0.4rem' }}>Limit</label>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', color: 'var(--text-soft)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.5rem' }}>Limit</label>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                             <input
                                 id="newCatLimit"
                                 type="text"
@@ -146,7 +146,7 @@ export default function BudgetPage({ budgets, onRefresh }) {
                                 value={newLimit}
                                 onChange={(e) => setNewLimit(e.target.value)}
                             />
-                            <span style={{ color: '#64748b', whiteSpace: 'nowrap' }}>đ</span>
+                            <span style={{ color: 'var(--text-soft)', fontWeight: 600, whiteSpace: 'nowrap' }}>đ</span>
                         </div>
                     </div>
                     <button
