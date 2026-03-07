@@ -103,3 +103,80 @@ def test_process_recurring_expenses(service, mock_storage):
     args, kwargs = mock_storage.update_expense.call_args
     assert args[0] == 1
     assert args[1]['last_recurrence_date'] == datetime.now().strftime("%Y-%m-%d")
+
+def test_process_recurring_expenses_multiple_days(service, mock_storage):
+    # Setup: a daily expense that hasn't run for 3 days
+    from datetime import datetime, timedelta
+    three_days_ago = (datetime.now() - timedelta(days=3)).date()
+    
+    recurring_template = {
+        "id": 1,
+        "amount": 50,
+        "category": "Coffee",
+        "note": "Daily coffee",
+        "date": three_days_ago.strftime("%Y-%m-%d") + " 08:00:00",
+        "is_recurring": True,
+        "recurrence_interval": "daily",
+        "last_recurrence_date": three_days_ago.strftime("%Y-%m-%d")
+    }
+    
+    mock_storage.get_expenses.return_value = [recurring_template]
+    
+    # Run
+    service.process_recurring_expenses()
+    
+    # Assert
+    # It should have called add_expense 3 times (for 2 days ago, yesterday, and today)
+    assert mock_storage.add_expense.call_count == 3
+    # It should have updated the template 3 times
+    assert mock_storage.update_expense.call_count == 3
+
+def test_process_recurring_expenses_weekly(service, mock_storage):
+    # Setup: a weekly expense that was last run 8 days ago
+    from datetime import datetime, timedelta
+    eight_days_ago = (datetime.now() - timedelta(days=8)).date()
+    
+    recurring_template = {
+        "id": 2,
+        "amount": 1000,
+        "category": "Groceries",
+        "note": "Weekly shopping",
+        "date": eight_days_ago.strftime("%Y-%m-%d") + " 08:00:00",
+        "is_recurring": True,
+        "recurrence_interval": "weekly",
+        "last_recurrence_date": eight_days_ago.strftime("%Y-%m-%d")
+    }
+    
+    mock_storage.get_expenses.return_value = [recurring_template]
+    
+    # Run
+    service.process_recurring_expenses()
+    
+    # Assert
+    # It should have called add_expense once (for 1 day ago)
+    assert mock_storage.add_expense.call_count == 1
+    
+def test_process_recurring_expenses_not_due(service, mock_storage):
+    # Setup: a monthly expense that was last run 15 days ago
+    from datetime import datetime, timedelta
+    fifteen_days_ago = (datetime.now() - timedelta(days=15)).date()
+    
+    recurring_template = {
+        "id": 3,
+        "amount": 2000,
+        "category": "Rent",
+        "note": "Monthly rent",
+        "date": fifteen_days_ago.strftime("%Y-%m-%d") + " 08:00:00",
+        "is_recurring": True,
+        "recurrence_interval": "monthly",
+        "last_recurrence_date": fifteen_days_ago.strftime("%Y-%m-%d")
+    }
+    
+    mock_storage.get_expenses.return_value = [recurring_template]
+    
+    # Run
+    service.process_recurring_expenses()
+    
+    # Assert
+    # It should NOT have called add_expense
+    assert not mock_storage.add_expense.called

@@ -14,3 +14,4 @@ er registry in CI pipeline
 13. New feature: group expense/bill data to day, week, month, year. -- DONE --
 14. Dashboard will show what we spent in a day with small table that can be scrolled up/down. The dashboard also show total spent in a day, week, month, year. Move chart to bottom of dashboard. -- DONE --
 15. Integration & E2E: Playwright has largely overtaken Cypress for Vite projects due to its native support for multiple tabs, frames, and better speed
+16. Implement new feature: Add calendar beside add new expense, the calendar will show total spent money for this day

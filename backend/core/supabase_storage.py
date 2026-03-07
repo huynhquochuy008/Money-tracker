@@ -86,7 +86,21 @@ class SupabaseStorage:
         result = query.execute()
         return result.data
 
-    def add_expense(self, amount: int, category: str, note: str, date: str, is_recurring: bool = False, recurrence_interval: Optional[str] = None) -> Dict:
+    def add_expense(
+        self,
+        amount: int,
+        category: str,
+        note: str,
+        date: str,
+        is_recurring: bool = False,
+        recurrence_interval: Optional[str] = None,
+    ) -> Dict:
+        """Insert a new expense.
+
+        Falls back to a schema-safe insert (without recurring columns) when the
+        Supabase schema cache returns PGRST204 (column not found). This lets the
+        app keep working even before the migration has been applied.
+        """
         user_id = self.get_user_id()
         expense = Expense(
             amount=amount,
@@ -96,10 +110,30 @@ class SupabaseStorage:
             user_id=user_id,
             is_recurring=is_recurring,
             recurrence_interval=recurrence_interval,
-            last_recurrence_date=date[:10] if is_recurring else None
+            last_recurrence_date=date[:10] if is_recurring else None,
         )
-        result = self.client.table('expenses').insert(expense.to_dict(exclude_id=True)).execute()
-        return result.data[0] if result.data else {}
+        full_data = expense.to_dict(exclude_id=True)
+
+        try:
+            result = self.client.table("expenses").insert(full_data).execute()
+            return result.data[0] if result.data else {}
+        except Exception as exc:
+            # PGRST204: column not found — recurring columns not yet migrated.
+            err_str = str(exc)
+            if "PGRST204" in err_str or "is_recurring" in err_str:
+                print(
+                    "⚠️  Recurring columns missing in Supabase schema. "
+                    "Run migrations/001_add_recurring_columns.sql to fix. "
+                    "Falling back to basic insert."
+                )
+                safe_data = {
+                    k: v
+                    for k, v in full_data.items()
+                    if k not in ("is_recurring", "recurrence_interval", "last_recurrence_date")
+                }
+                result = self.client.table("expenses").insert(safe_data).execute()
+                return result.data[0] if result.data else {}
+            raise
 
     def update_expense(self, expense_id: int, updates: Dict) -> bool:
         user_id = self.get_user_id()

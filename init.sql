@@ -13,7 +13,10 @@ CREATE TABLE IF NOT EXISTS expenses (
     amount NUMERIC NOT NULL,
     category TEXT NOT NULL,
     note TEXT,
-    date TEXT NOT NULL, -- Format: YYYY-MM-DD
+    date TEXT NOT NULL,              -- Format: YYYY-MM-DD HH:MM:SS
+    is_recurring BOOLEAN DEFAULT FALSE,
+    recurrence_interval TEXT,        -- 'daily' | 'weekly' | 'monthly' | NULL
+    last_recurrence_date TEXT,       -- Format: YYYY-MM-DD
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
