@@ -647,6 +647,43 @@ h5 {
   background: var(--text-muted);
 }
 
+/* ── Budget Alerts ───────────────────────────────────────── */
+@keyframes pulseDanger {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes pulseWarn {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.budget-pulse-danger {
+  animation: pulseDanger 1.2s ease-in-out infinite;
+}
+
+.budget-pulse-warn {
+  animation: pulseWarn 1.8s ease-in-out infinite;
+}
+
+.budget-alert-badge {
+  animation: pulseDanger 1.5s ease-in-out infinite;
+}
+
 /* ── Search & Filter Bar ─────────────────────────────────── */
 .search-filter-bar {
   display: flex;

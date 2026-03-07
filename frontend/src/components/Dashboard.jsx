@@ -115,20 +115,44 @@ export default function Dashboard({ expenses, budgets, summary, month, months, o
                         ) : (
                             Object.entries(budgets).map(([cat, lim]) => {
                                 const s = catSum[cat] || 0;
-                                const pct = Math.min((s / lim) * 100, 100);
-                                const color = pct > 90 ? '#ef4444' : pct > 70 ? '#f59e0b' : '#10b981';
+                                const pct = lim > 0 ? (s / lim) * 100 : 0;
+                                const pctCapped = Math.min(pct, 100);
+                                const isOver = pct >= 100;
+                                const isWarn = pct >= 80 && !isOver;
+                                const isSafe = !isWarn && !isOver;
+
+                                const color = isOver ? '#ef4444' : isWarn ? '#f59e0b' : '#10b981';
+                                const statusLabel = isOver ? '⚠ Over Limit' : isWarn ? '⚡ Near Limit' : '✓ On Track';
+                                const statusStyle = {
+                                    fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px',
+                                    borderRadius: '999px', letterSpacing: '0.03em',
+                                    background: isOver ? '#fee2e2' : isWarn ? '#fef3c7' : '#d1fae5',
+                                    color: isOver ? '#dc2626' : isWarn ? '#d97706' : '#059669',
+                                };
+
                                 return (
-                                    <div key={cat} style={{ marginBottom: '1.25rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                            <span style={{ fontWeight: 600, color: 'var(--text-soft)', fontSize: '0.95rem' }}>{cat}</span>
-                                            <span className="text-muted small" style={{ fontWeight: 600 }}>{Math.round(pct)}%</span>
+                                    <div key={cat} style={{ marginBottom: '1.4rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <span style={{ fontWeight: 700, color: 'var(--text-soft)', fontSize: '0.95rem' }}>{cat}</span>
+                                            <span style={statusStyle} className={isOver || isWarn ? 'budget-alert-badge' : ''}>
+                                                {statusLabel}
+                                            </span>
                                         </div>
                                         <div className="premium-progress">
-                                            <div className="progress-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                                            <div
+                                                className={`progress-bar-fill${isOver ? ' budget-pulse-danger' : isWarn ? ' budget-pulse-warn' : ''}`}
+                                                style={{ width: `${pctCapped}%`, background: color }}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                                             <span className="text-muted small" style={{ fontWeight: 600 }}>Spent: {s.toLocaleString()}đ</span>
-                                            <span className="text-muted small" style={{ fontWeight: 600 }}>Left: {(lim - s).toLocaleString()}đ</span>
+                                            {isOver ? (
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>
+                                                    Over by {(s - lim).toLocaleString()}đ!
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted small" style={{ fontWeight: 600 }}>Left: {(lim - s).toLocaleString()}đ</span>
+                                            )}
                                         </div>
                                     </div>
                                 );
