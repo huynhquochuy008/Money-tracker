@@ -16,6 +16,7 @@ import Dashboard from './components/Dashboard';
 import HistoryPage from './components/HistoryPage';
 import BudgetPage from './components/BudgetPage';
 import ExpenseModal from './components/ExpenseModal';
+import BottomNav from './components/BottomNav';
 
 export default function App() {
   // ── Auth state ──────────────────────────────────────────
@@ -117,20 +118,19 @@ export default function App() {
       {/* Mobile top bar */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999,
-        display: 'none', // shown via CSS @media below
+        display: 'none', // shown via CSS @media
         justifyContent: 'space-between', alignItems: 'center',
-        padding: '1rem 1.5rem',
-        background: 'rgba(8,15,30,0.9)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        padding: '0.75rem 1.25rem',
+        background: 'rgba(255,255,255,0.8)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(0,0,0,0.05)',
       }} className="mobile-topbar">
-        <span style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f1f5f9' }}>◈ MoneyPro</span>
-        <button
-          onClick={() => setMobileOpen((v) => !v)}
-          style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}
-        >
-          ☰
-        </button>
+        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: '#6366f1' }}>◈</span> MoneyPro
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{userEmail}</span>
+        </div>
       </div>
 
       <main className="main-content">
@@ -159,6 +159,12 @@ export default function App() {
           />
         )}
       </main>
+
+      <BottomNav
+        activePage={page}
+        onNavigate={handleNavigate}
+        onAdd={openAddModal}
+      />
 
       <ExpenseModal
         isOpen={modalOpen}

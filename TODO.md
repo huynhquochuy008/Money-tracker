@@ -10,6 +10,7 @@
 10. Integarte check common security/vulnerability tools for both frontend and backend to CI pipeline
 11. Create Makefile to automatically build, test, deploy, run backend and frontend at local -- DONE --
 12. Create Makefile to automatically build, deploy backend and frontend docker image in github contain
-er registry
+er registry in CI pipeline
 13. New feature: group expense/bill data to day, week, month, year. -- DONE --
 14. Dashboard will show what we spent in a day with small table that can be scrolled up/down. The dashboard also show total spent in a day, week, month, year. Move chart to bottom of dashboard. -- DONE --
+15. Integration & E2E: Playwright has largely overtaken Cypress for Vite projects due to its native support for multiple tabs, frames, and better speed
