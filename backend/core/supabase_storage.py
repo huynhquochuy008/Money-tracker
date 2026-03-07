@@ -86,14 +86,17 @@ class SupabaseStorage:
         result = query.execute()
         return result.data
 
-    def add_expense(self, amount: int, category: str, note: str, date: str) -> Dict:
+    def add_expense(self, amount: int, category: str, note: str, date: str, is_recurring: bool = False, recurrence_interval: Optional[str] = None) -> Dict:
         user_id = self.get_user_id()
         expense = Expense(
             amount=amount,
             category=category,
             note=note,
             date=date,
-            user_id=user_id
+            user_id=user_id,
+            is_recurring=is_recurring,
+            recurrence_interval=recurrence_interval,
+            last_recurrence_date=date[:10] if is_recurring else None
         )
         result = self.client.table('expenses').insert(expense.to_dict(exclude_id=True)).execute()
         return result.data[0] if result.data else {}

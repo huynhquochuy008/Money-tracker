@@ -19,7 +19,8 @@ def test_get_expenses_table(service, mock_storage, month, expected_data):
     mock_storage.get_expenses.return_value = expected_data
     result = service.get_expenses(month)
     assert result == expected_data
-    mock_storage.get_expenses.assert_called_once_with(month)
+    # It's called twice now: once by process_recurring_expenses (no args) and once by get_expenses(month)
+    mock_storage.get_expenses.assert_any_call(month)
 
 @pytest.mark.parametrize("amount, category, note, date, expected_res", [
     (100, "Food", "Dinner", "2024-03-01", {"id": 1, "amount": 100}),
@@ -72,3 +73,33 @@ def test_budget_ops_table(service, mock_storage, budget_data):
 def test_delete_budget_category_table(service, mock_storage, category):
     service.delete_budget_category(category)
     mock_storage.delete_budget_category.assert_called_once_with(category)
+
+def test_process_recurring_expenses(service, mock_storage):
+    # Setup: a recurring expense that should have triggered yesterday
+    from datetime import datetime, timedelta
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    recurring_template = {
+        "id": 1,
+        "amount": 50,
+        "category": "Coffee",
+        "note": "Daily coffee",
+        "date": yesterday + " 08:00:00",
+        "is_recurring": True,
+        "recurrence_interval": "daily",
+        "last_recurrence_date": yesterday
+    }
+    
+    mock_storage.get_expenses.return_value = [recurring_template]
+    
+    # Run
+    service.process_recurring_expenses()
+    
+    # Assert
+    # 1. It should have called add_expense for the new instance
+    assert mock_storage.add_expense.called
+    # 2. It should have updated the template's last_recurrence_date
+    assert mock_storage.update_expense.called
+    args, kwargs = mock_storage.update_expense.call_args
+    assert args[0] == 1
+    assert args[1]['last_recurrence_date'] == datetime.now().strftime("%Y-%m-%d")

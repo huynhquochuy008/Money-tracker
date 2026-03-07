@@ -19,6 +19,9 @@ class SQLiteStorage:
                 category TEXT,
                 note TEXT,
                 date TEXT,
+                is_recurring INTEGER DEFAULT 0,
+                recurrence_interval TEXT,
+                last_recurrence_date TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -47,12 +50,23 @@ class SQLiteStorage:
         rows = self._conn.execute(query, params).fetchall()
         return [dict(row) for row in rows]
 
-    def add_expense(self, amount: float, category: str, note: str, date: str) -> Dict:
-        query = "INSERT INTO expenses (user_id, amount, category, note, date) VALUES (?, ?, ?, ?, ?)"
-        cursor = self._conn.execute(query, (self._user_id, amount, category, note, date))
+    def add_expense(self, amount: float, category: str, note: str, date: str, is_recurring: bool = False, recurrence_interval: Optional[str] = None) -> Dict:
+        query = "INSERT INTO expenses (user_id, amount, category, note, date, is_recurring, recurrence_interval, last_recurrence_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        last_recurrence_date = date[:10] if is_recurring else None
+        cursor = self._conn.execute(query, (self._user_id, amount, category, note, date, 1 if is_recurring else 0, recurrence_interval, last_recurrence_date))
         new_id = cursor.lastrowid
         self._conn.commit()
-        return {"id": new_id, "amount": amount, "category": category, "note": note, "date": date, "user_id": self._user_id}
+        return {
+            "id": new_id,
+            "amount": amount,
+            "category": category,
+            "note": note,
+            "date": date,
+            "user_id": self._user_id,
+            "is_recurring": is_recurring,
+            "recurrence_interval": recurrence_interval,
+            "last_recurrence_date": last_recurrence_date
+        }
 
     def update_expense(self, expense_id: int, updates: Dict) -> bool:
         keys = [k for k in updates.keys() if k not in ['id', 'user_id', 'created_at']]

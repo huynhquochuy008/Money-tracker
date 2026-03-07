@@ -17,6 +17,8 @@ export default function ExpenseModal({ isOpen, editItem, budgets, onClose, onSav
     const [category, setCategory] = useState('Khác');
     const [date, setDate] = useState('');
     const [note, setNote] = useState('');
+    const [isRecurring, setIsRecurring] = useState(false);
+    const [recurrenceInterval, setRecurrenceInterval] = useState('monthly');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -27,11 +29,15 @@ export default function ExpenseModal({ isOpen, editItem, budgets, onClose, onSav
             setCategory(editItem.category);
             setDate((editItem.date || '').split(' ')[0]);
             setNote(editItem.note || '');
+            setIsRecurring(!!editItem.is_recurring);
+            setRecurrenceInterval(editItem.recurrence_interval || 'monthly');
         } else {
             setAmount('');
             setCategory(Object.keys(budgets)[0] || 'Khác');
             setDate(new Date().toISOString().split('T')[0]);
             setNote('');
+            setIsRecurring(false);
+            setRecurrenceInterval('monthly');
         }
         setError('');
     }, [editItem, isOpen, budgets]);
@@ -60,9 +66,9 @@ export default function ExpenseModal({ isOpen, editItem, budgets, onClose, onSav
 
         try {
             if (editItem) {
-                await expenseApi.update(editItem.id, parsedAmount, category, note, date);
+                await expenseApi.update(editItem.id, parsedAmount, category, note, date, isRecurring, recurrenceInterval);
             } else {
-                await expenseApi.add(parsedAmount, category, note, date);
+                await expenseApi.add(parsedAmount, category, note, date, isRecurring, recurrenceInterval);
             }
             onSaved();
             onClose();
@@ -146,8 +152,33 @@ export default function ExpenseModal({ isOpen, editItem, budgets, onClose, onSav
                             placeholder="What did you spend on?"
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
-                            style={{ resize: 'none' }}
                         />
+                    </div>
+
+                    {/* Recurring toggle */}
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99, 102, 241, 0.05)', padding: '1rem', borderRadius: '14px', border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                        <input
+                            type="checkbox"
+                            id="isRecurring"
+                            checked={isRecurring}
+                            onChange={(e) => setIsRecurring(e.target.checked)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="isRecurring" style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: 600, cursor: 'pointer', flex: 1 }}>
+                            Make Recurring
+                        </label>
+                        {isRecurring && (
+                            <select
+                                className="modal-input"
+                                style={{ width: 'auto', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                value={recurrenceInterval}
+                                onChange={(e) => setRecurrenceInterval(e.target.value)}
+                            >
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        )}
                     </div>
 
                     <button

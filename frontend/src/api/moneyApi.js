@@ -54,12 +54,12 @@ export const expenseApi = {
     getSummary: () => get('/summary'),
 
     /** Add a new expense */
-    add: (amount, category, note, date) =>
-        post('/add', { amount, category, note, date }),
+    add: (amount, category, note, date, is_recurring, recurrence_interval) =>
+        post('/add', { amount, category, note, date, is_recurring, recurrence_interval }),
 
     /** Update an existing expense */
-    update: (id, amount, category, note, date) =>
-        post('/expense/update', { id, amount, category, note, date }),
+    update: (id, amount, category, note, date, is_recurring, recurrence_interval) =>
+        post('/expense/update', { id, amount, category, note, date, is_recurring, recurrence_interval }),
 
     /** Delete an expense by id */
     delete: (id) => get(`/expense/delete?id=${id}`),

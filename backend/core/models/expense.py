@@ -9,6 +9,9 @@ class Expense(BaseModel):
     user_id: str
     id: Optional[int] = None
     note: Optional[str] = ""
+    is_recurring: bool = False
+    recurrence_interval: Optional[str] = None # daily, weekly, monthly
+    last_recurrence_date: Optional[str] = None # YYYY-MM-DD
     created_at: Optional[str] = None
 
     @field_validator('date')
