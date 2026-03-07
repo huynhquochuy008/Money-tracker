@@ -647,6 +647,116 @@ h5 {
   background: var(--text-muted);
 }
 
+/* ── Search & Filter Bar ─────────────────────────────────── */
+.search-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--bg-main);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  padding: 0.75rem 2.5rem 0.75rem 2.8rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: #fff;
+}
+
+.search-clear {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.search-clear:hover {
+  background: var(--gray-200);
+  color: var(--text-main);
+}
+
+.filter-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  background: var(--bg-main);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  padding: 0.5rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.filter-select:focus {
+  border-color: var(--primary);
+}
+
+.filter-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .filter-row {
+    gap: 0.5rem;
+  }
+
+  .filter-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .filter-count {
+    width: 100%;
+    text-align: right;
+    margin-left: 0;
+  }
+}
+
+
 /* ── Bottom Nav ─────────────────────────────────────────── */
 .bottom-nav {
   display: none;
@@ -738,7 +848,8 @@ h5 {
   }
 
   .main-content {
-    padding-bottom: 90px !important; /* Leave space for bottom nav */
+    padding-bottom: 90px !important;
+    /* Leave space for bottom nav */
   }
 
   .mobile-topbar {
@@ -746,7 +857,7 @@ h5 {
     background: rgba(255, 255, 255, 0.9) !important;
     color: var(--text-main) !important;
   }
-  
+
   .mobile-topbar span {
     color: var(--text-main) !important;
   }

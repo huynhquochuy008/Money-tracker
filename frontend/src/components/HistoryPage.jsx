@@ -1,41 +1,152 @@
 /**
- * HistoryPage.jsx — Transaction history table with edit and delete actions.
+ * HistoryPage.jsx — Transaction history with real-time search and filters.
+ * Supports searching by note/category, filtering by category, and sorting.
  */
+import { useState, useMemo } from 'react';
 import { expenseApi } from '../api/moneyApi';
 
 /**
  * @param {Object}   props
- * @param {Array}    props.expenses  - filtered list of expense objects
+ * @param {Array}    props.expenses  - filtered list of expense objects for the month
  * @param {Function} props.onEdit    - called with expense object to open edit modal
  * @param {Function} props.onRefresh - called after a delete to reload data
  */
 export default function HistoryPage({ expenses, onEdit, onRefresh }) {
-    /**
-     * Delete an expense after user confirmation.
-     * @param {number} id
-     */
+    const [search, setSearch] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
+    const [sortOrder, setSortOrder] = useState('date-desc'); // date-desc | date-asc | amount-desc | amount-asc
+
+    /** Delete an expense after user confirmation. */
     const handleDelete = async (id) => {
         if (!confirm('Delete this transaction?')) return;
         await expenseApi.delete(id);
         onRefresh();
     };
 
-    const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date));
+    /** All unique categories from the data for the filter dropdown */
+    const categories = useMemo(() => {
+        const allCats = [...new Set(expenses.map((e) => e.category))].sort();
+        return allCats;
+    }, [expenses]);
+
+    /** Apply search + category filter, then sort */
+    const filtered = useMemo(() => {
+        let result = expenses;
+
+        // Text search across note and category
+        if (search.trim()) {
+            const q = search.toLowerCase();
+            result = result.filter(
+                (e) =>
+                    (e.note || '').toLowerCase().includes(q) ||
+                    (e.category || '').toLowerCase().includes(q)
+            );
+        }
+
+        // Category filter
+        if (filterCategory) {
+            result = result.filter((e) => e.category === filterCategory);
+        }
+
+        // Sorting
+        result = [...result].sort((a, b) => {
+            switch (sortOrder) {
+                case 'date-asc':
+                    return a.date.localeCompare(b.date);
+                case 'amount-desc':
+                    return b.amount - a.amount;
+                case 'amount-asc':
+                    return a.amount - b.amount;
+                case 'date-desc':
+                default:
+                    return b.date.localeCompare(a.date);
+            }
+        });
+
+        return result;
+    }, [expenses, search, filterCategory, sortOrder]);
+
+    const totalFiltered = filtered.reduce((sum, e) => sum + (e.amount || 0), 0);
 
     return (
         <div className="page-enter">
             <h1 className="section-title">Transaction History</h1>
 
-            {sorted.length === 0 ? (
+            {/* ── Search & Filter Bar ─────────────────────────── */}
+            <div className="search-filter-bar glass-card" style={{ marginBottom: '1.5rem', padding: '1rem 1.5rem' }}>
+                {/* Search input */}
+                <div className="search-input-wrap">
+                    <span className="search-icon">🔍</span>
+                    <input
+                        id="historySearch"
+                        type="text"
+                        placeholder="Search notes or categories…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="search-input"
+                    />
+                    {search && (
+                        <button onClick={() => setSearch('')} className="search-clear" aria-label="Clear search">×</button>
+                    )}
+                </div>
+
+                {/* Filters row */}
+                <div className="filter-row">
+                    {/* Category filter */}
+                    <select
+                        id="historyCategory"
+                        value={filterCategory}
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                        className="filter-select"
+                    >
+                        <option value="">All Categories</option>
+                        {categories.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+
+                    {/* Sort */}
+                    <select
+                        id="historySort"
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        className="filter-select"
+                    >
+                        <option value="date-desc">Newest First</option>
+                        <option value="date-asc">Oldest First</option>
+                        <option value="amount-desc">Highest Amount</option>
+                        <option value="amount-asc">Lowest Amount</option>
+                    </select>
+
+                    {/* Results count */}
+                    <span className="filter-count">
+                        {filtered.length} result{filtered.length !== 1 ? 's' : ''} · {totalFiltered.toLocaleString()}đ
+                    </span>
+                </div>
+            </div>
+
+            {/* ── Results Table ───────────────────────────────── */}
+            {filtered.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '4rem 0', color: '#475569' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
-                    <p>No transactions this month.</p>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                        {expenses.length === 0 ? '📭' : '🔎'}
+                    </div>
+                    <p>{expenses.length === 0 ? 'No transactions this month.' : 'No results match your search.'}</p>
+                    {(search || filterCategory) && (
+                        <button
+                            onClick={() => { setSearch(''); setFilterCategory(''); }}
+                            className="btn-premium"
+                            style={{ marginTop: '1rem', fontSize: '0.9rem', padding: '0.5rem 1.25rem' }}
+                        >
+                            Clear Filters
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="table-responsive">
                     <table className="table-custom mobile-stack">
                         <tbody>
-                            {sorted.map((item) => {
+                            {filtered.map((item) => {
                                 const d = (item.date || '').split(' ')[0];
                                 const formatted = d.split('-').reverse().join('/');
                                 return (
@@ -47,6 +158,9 @@ export default function HistoryPage({ expenses, onEdit, onRefresh }) {
                                         {/* Category */}
                                         <td style={{ width: '18%' }}>
                                             <span className="badge-cat">{item.category}</span>
+                                            {item.is_recurring && (
+                                                <span title="Recurring" style={{ marginLeft: '6px', fontSize: '0.75rem' }}>🔄</span>
+                                            )}
                                         </td>
                                         {/* Note */}
                                         <td>
@@ -62,20 +176,8 @@ export default function HistoryPage({ expenses, onEdit, onRefresh }) {
                                         {/* Actions */}
                                         <td style={{ width: '10%', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                                                <button
-                                                    className="icon-btn"
-                                                    onClick={() => onEdit(item)}
-                                                    title="Edit"
-                                                >
-                                                    ✎
-                                                </button>
-                                                <button
-                                                    className="icon-btn danger"
-                                                    onClick={() => handleDelete(item.id)}
-                                                    title="Delete"
-                                                >
-                                                    🗑
-                                                </button>
+                                                <button className="icon-btn" onClick={() => onEdit(item)} title="Edit">✎</button>
+                                                <button className="icon-btn danger" onClick={() => handleDelete(item.id)} title="Delete">🗑</button>
                                             </div>
                                         </td>
                                     </tr>
