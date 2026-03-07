@@ -148,6 +148,7 @@ export default function App() {
         {page === 'history' && (
           <HistoryPage
             expenses={filtered}
+            month={month}
             onEdit={openEditModal}
             onRefresh={loadData}
           />

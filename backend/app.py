@@ -5,9 +5,11 @@ Serves all /api/* endpoints. Frontend (React/Vite) runs separately.
 """
 import os
 import json
+import csv
+import io
 from datetime import datetime
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -248,6 +250,33 @@ def delete_budget_category():
         service.delete_budget_category(category)
         return jsonify({"status": "success"})
     return jsonify({"status": "error", "message": "Category required"}), 400
+
+
+# ---------------------------------------------------------------------------
+# Export routes
+# ---------------------------------------------------------------------------
+@app.route("/api/export", methods=["GET"])
+def export_expenses():
+    """Export all expenses for the current user as a CSV file download."""
+    month = request.args.get("month")
+    expenses = service.get_expenses(month)
+
+    output = io.StringIO()
+    writer = csv.DictWriter(
+        output,
+        fieldnames=["id", "date", "category", "amount", "note", "is_recurring"],
+        extrasaction="ignore"
+    )
+    writer.writeheader()
+    for exp in expenses:
+        writer.writerow(exp)
+
+    filename = f"moneypro_{month or 'all'}_{datetime.now().strftime('%Y%m%d')}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 # ---------------------------------------------------------------------------

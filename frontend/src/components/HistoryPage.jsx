@@ -8,19 +8,44 @@ import { expenseApi } from '../api/moneyApi';
 /**
  * @param {Object}   props
  * @param {Array}    props.expenses  - filtered list of expense objects for the month
+ * @param {string}   props.month     - current selected month (YYYY-MM) for export
  * @param {Function} props.onEdit    - called with expense object to open edit modal
  * @param {Function} props.onRefresh - called after a delete to reload data
  */
-export default function HistoryPage({ expenses, onEdit, onRefresh }) {
+export default function HistoryPage({ expenses, month, onEdit, onRefresh }) {
     const [search, setSearch] = useState('');
     const [filterCategory, setFilterCategory] = useState('');
     const [sortOrder, setSortOrder] = useState('date-desc'); // date-desc | date-asc | amount-desc | amount-asc
+    const [exporting, setExporting] = useState(false);
 
     /** Delete an expense after user confirmation. */
     const handleDelete = async (id) => {
         if (!confirm('Delete this transaction?')) return;
         await expenseApi.delete(id);
         onRefresh();
+    };
+
+    /** Trigger a CSV download from the /api/export endpoint */
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const params = month ? `?month=${month}` : '';
+            const res = await fetch(`/api/export${params}`);
+            if (!res.ok) throw new Error('Export failed');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = res.headers.get('Content-Disposition')?.split('filename=')[1] || 'export.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Export error:', err);
+        } finally {
+            setExporting(false);
+        }
     };
 
     /** All unique categories from the data for the filter dropdown */
@@ -70,7 +95,25 @@ export default function HistoryPage({ expenses, onEdit, onRefresh }) {
 
     return (
         <div className="page-enter">
-            <h1 className="section-title">Transaction History</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h1 className="section-title" style={{ margin: 0 }}>Transaction History</h1>
+                <button
+                    id="exportCsvBtn"
+                    onClick={handleExport}
+                    disabled={exporting}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        background: exporting ? '#e2e8f0' : 'var(--secondary)',
+                        color: '#fff', border: 'none', borderRadius: '12px',
+                        padding: '0.55rem 1.1rem', fontFamily: 'inherit',
+                        fontWeight: 700, fontSize: '0.85rem', cursor: exporting ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)'
+                    }}
+                >
+                    {exporting ? '⏳ Exporting…' : '⬇ Export CSV'}
+                </button>
+            </div>
 
             {/* ── Search & Filter Bar ─────────────────────────── */}
             <div className="search-filter-bar glass-card" style={{ marginBottom: '1.5rem', padding: '1rem 1.5rem' }}>
