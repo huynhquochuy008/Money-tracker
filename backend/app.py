@@ -15,6 +15,10 @@ from dotenv import load_dotenv
 
 from core.services import MoneyService
 from core.supabase_storage import SupabaseStorage
+from core.sqlite_storage import SQLiteStorage
+from core.auth_service import AuthService
+from core.circle_service import CircleService
+from core.sync_service import SyncService
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -23,10 +27,10 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Allow the Vite dev server (5173) and production origin in CORS.
+# Allow the Vite dev server (5173/5174) and production origin in CORS.
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173"
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174"
 ).split(",")
 CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}},
      supports_credentials=True)
@@ -43,9 +47,23 @@ if not SUPABASE_URL or not SUPABASE_KEY or "your_supabase" in SUPABASE_URL:
         "Please configure .env with SUPABASE_URL and SUPABASE_KEY."
     )
 
-print("🌐 Initialising Supabase Storage")
-storage = SupabaseStorage(SUPABASE_URL, SUPABASE_KEY)
+print("💾 Initialising Local SQLite Storage")
+# Use absolute paths to avoid confusion with CWD
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(BASE_DIR, "data", "moneypro.db")
+storage = SQLiteStorage(db_path)
 service = MoneyService(storage)
+
+# Local Services for Auth and Circles
+users_json = os.path.join(BASE_DIR, "data", "users.json")
+circles_json = os.path.join(BASE_DIR, "data", "circles.json")
+auth_service = AuthService(data_file=users_json)
+circle_service = CircleService(data_file=circles_json)
+sync_service = SyncService(SUPABASE_URL, SUPABASE_KEY, storage)
+
+# In-memory "session" for testing (resets on restart)
+# In a real app, use Flask-Session or JWT
+_current_user = None
 
 
 # ---------------------------------------------------------------------------
@@ -88,87 +106,82 @@ def sync_local_data():
         print(f"⚠️  Sync failed: {exc}")
 
 
-# ---------------------------------------------------------------------------
-# Auth routes
-# ---------------------------------------------------------------------------
-# @app.route("/api/auth/signup", methods=["POST"])
-# def signup():
-#     """Register a new user with email + password."""
-#     data = request.json or {}
-#     email = data.get("email")
-#     password = data.get("password")
-#     try:
-#         res = storage.client.auth.sign_up({"email": email, "password": password})
-#         
-#         # Ensure profile exists immediately
-#         storage.ensure_profile()
-#         
-#         user_data = None
-#         if res.user:
-#             user_data = {
-#                 "id": res.user.id,
-#                 "email": res.user.email,
-#                 "created_at": res.user.created_at,
-#             }
-#         return jsonify({
-#             "status": "success",
-#             "user": user_data,
-#         })
-#     except Exception as exc:
-#         import traceback
-#         print(f"❌ Signup error:\n{traceback.format_exc()}")
-#         return jsonify({"status": "error", "message": str(exc)}), 400
+# Note: The original Supabase signup code was commented out. 
+# We are currently using a local AuthService for testing/demo purposes.
+# If migrating back to fully Supabase, replace register/login with Supabase client calls.
 
 
-# @app.route("/api/auth/login", methods=["POST"])
-# def login():
-#     """Authenticate a user with email + password, return session."""
-#     data = request.json or {}
-#     email = data.get("email")
-#     password = data.get("password")
-#     try:
-#         res = storage.client.auth.sign_in_with_password(
-#             {"email": email, "password": password}
-#         )
-#         
-#         # Ensure profile exists immediately
-#         storage.ensure_profile()
-#         
-#         session_data = None
-#         if res.session:
-#             session_data = {
-#                 "access_token": res.session.access_token,
-#                 "refresh_token": res.session.refresh_token,
-#                 "expires_in": res.session.expires_in,
-#                 "token_type": res.session.token_type,
-#                 "user": {
-#                     "id": res.session.user.id,
-#                     "email": res.session.user.email,
-#                 }
-#             }
-#         return jsonify({
-#             "status": "success",
-#             "session": session_data,
-#         })
-#     except Exception as exc:
-#         print(f"❌ Login error: {exc}")
-#         return jsonify({"status": "error", "message": str(exc)}), 401
+@app.route("/api/auth/register", methods=["POST"])
+def register():
+    data = request.json or {}
+    email = data.get("email")
+    password = data.get("password")
+    try:
+        user = auth_service.register(email, password)
+        return jsonify({"status": "success", "user": user})
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def login():
+    global _current_user
+    data = request.json or {}
+    email = data.get("email")
+    password = data.get("password")
+    user = auth_service.login(email, password)
+    if user:
+        _current_user = user
+        storage.set_user_id(user["id"])
+        return jsonify({"status": "success", "user": user})
+    return jsonify({"status": "error", "message": "Invalid email or password"}), 401
+
+
+@app.route("/api/auth/recover", methods=["POST"])
+def recover_account():
+    data = request.json or {}
+    user_id = data.get("user_id")
+    new_email = data.get("email")
+    new_password = data.get("password")
+    
+    if not user_id or not new_email or not new_password:
+        return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+    try:
+        if auth_service.recover_by_id(user_id, new_email, new_password):
+            return jsonify({"status": "success", "message": "Account recovered successfully"})
+        return jsonify({"status": "error", "message": "Recovery failed"}), 400
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
 
 
 @app.route("/api/auth/session", methods=["GET", "DELETE"])
 def session_handler():
-    """Hardcoded to always return authenticated status for No-Auth mode."""
+    global _current_user
     if request.method == "GET":
-        return jsonify({
-            "status": "authenticated",
-            "user": {
-                "id": os.getenv("SUPABASE_USER_ID"),
-                "email": "demo@moneypro.ai",
-            },
-        })
+        if _current_user:
+            storage.set_user_id(_current_user["id"])
+            return jsonify({
+                "status": "authenticated",
+                "user": _current_user
+            })
+        
+        # Fallback to legacy env user if nothing set
+        legacy_id = os.getenv("SUPABASE_USER_ID")
+        if legacy_id:
+             return jsonify({
+                "status": "authenticated",
+                "user": {
+                    "id": legacy_id,
+                    "email": "demo@moneypro.ai",
+                },
+            })
+
+        return jsonify({"status": "unauthenticated"}), 401
 
     if request.method == "DELETE":
-        return jsonify({"status": "success", "message": "Logged out (mock)"})
+        _current_user = None
+        return jsonify({"status": "success", "message": "Logged out"})
 
     return jsonify({"status": "error", "message": "Method not allowed"}), 405
 
@@ -280,13 +293,141 @@ def export_expenses():
 
 
 # ---------------------------------------------------------------------------
+# Circle / Group Tracking routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/circles/mine", methods=["GET", "POST"])
+def manage_my_circles():
+    if not _current_user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    if request.method == "POST":
+        data = request.json or {}
+        name = data.get("name", "New Circle")
+        circle = circle_service.create_circle(_current_user["id"], name)
+        return jsonify({"status": "success", "circle": circle})
+    else:
+        # GET
+        storage.set_user_id(_current_user["id"])
+        return jsonify(circle_service.get_user_circles(_current_user["id"]))
+
+
+@app.route("/api/circles/invite", methods=["POST"])
+def invite_to_circle():
+    if not _current_user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    data = request.json or {}
+    circle_id = data.get("circle_id")
+    email = data.get("email")
+    share_tx = data.get("share_transactions", True)
+    share_bg = data.get("share_budget", True)
+    
+    # Verify ownership
+    circles = circle_service.get_user_circles(_current_user["id"])
+    if not any(c["id"] == circle_id for c in circles):
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    
+    # Prevent self-invitation
+    if email.lower() == _current_user["email"].lower():
+        return jsonify({"status": "error", "message": "You cannot invite yourself to your own circle."}), 400
+
+    if circle_service.invite_member(circle_id, email, share_tx, share_bg):
+        return jsonify({"status": "success"})
+    return jsonify({"status": "error", "message": "Already invited or circle not found"}), 400
+
+
+@app.route("/api/circles/pending")
+def get_pending_invites():
+    if not _current_user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    return jsonify(circle_service.get_pending_invites(_current_user["email"]))
+
+
+@app.route("/api/circles/respond", methods=["POST"])
+def respond_to_invite():
+    if not _current_user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    data = request.json or {}
+    circle_id = data.get("circle_id")
+    response = data.get("response") # "accept" or "deny"
+    
+    if not circle_id or not response:
+        return jsonify({"status": "error", "message": "Missing fields"}), 400
+        
+    if circle_service.respond_to_invite(circle_id, _current_user["email"], response):
+        # If accepted, we might want to sync data for that circle's owner? 
+        # For now just success.
+        return jsonify({"status": "success"})
+    return jsonify({"status": "error", "message": "Failed to respond to invite"}), 400
+
+
+@app.route("/api/sync/supabase", methods=["POST"])
+def sync_data():
+    if not _current_user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    # We use the _current_user['id'] which we reconstructed via Recovery
+    if sync_service.sync_from_supabase(_current_user["id"]):
+        return jsonify({"status": "success", "message": "Data synced from cloud"})
+    return jsonify({"status": "error", "message": "Sync failed"}), 500
+
+
+# Redundant route removed (consolidated into /api/circles/mine above)
+
+
+@app.route("/api/circles/shared-with-me")
+def get_shared_circles():
+    if not _current_user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    return jsonify(circle_service.get_shared_with_me(_current_user["email"]))
+
+
+@app.route("/api/watch/summary")
+def watch_summary():
+    """Get someone else's summary if they shared it with you."""
+    if not _current_user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    target_user_id = request.args.get("user_id")
+    
+    # Permission check
+    shared = circle_service.get_shared_with_me(_current_user["email"])
+    permit = next((s for s in shared if s["owner_id"] == target_user_id), None)
+    
+    if not permit or not permit["permissions"]["share_budget"]:
+        return jsonify({"status": "error", "message": "Access denied"}), 403
+    
+    return jsonify(service.get_summary(user_id=target_user_id))
+
+
+@app.route("/api/watch/expenses")
+def watch_expenses():
+    """Get someone else's expenses if they shared it with you."""
+    if not _current_user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    target_user_id = request.args.get("user_id")
+    month = request.args.get("month")
+    
+    # Permission check
+    shared = circle_service.get_shared_with_me(_current_user["email"])
+    permit = next((s for s in shared if s["owner_id"] == target_user_id), None)
+    
+    if not permit or not permit["permissions"]["share_transactions"]:
+        return jsonify({"status": "error", "message": "Access denied"}), 403
+    
+    return jsonify(service.get_expenses(month=month, user_id=target_user_id))
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    try:
-        storage.ensure_profile()
-        sync_local_data()
-    except Exception as exc:
-        print(f"⚠️  Startup error: {exc}")
+    # Ensure profile and local sync only for supabase mode or legacy
+    # For SQLite, it's handled by __init__
+    if isinstance(storage, SupabaseStorage):
+        try:
+            storage.ensure_profile()
+            sync_local_data()
+        except Exception as exc:
+            print(f"⚠️  Startup error: {exc}")
 
     app.run(host="0.0.0.0", port=5001, debug=True)

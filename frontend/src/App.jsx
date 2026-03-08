@@ -10,19 +10,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authApi, expenseApi, budgetApi } from './api/moneyApi';
 
-// import AuthOverlay from './components/AuthOverlay';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import HistoryPage from './components/HistoryPage';
 import BudgetPage from './components/BudgetPage';
+import CirclesPage from './components/CirclesPage';
 import ExpenseModal from './components/ExpenseModal';
+import AuthOverlay from './components/AuthOverlay';
 import BottomNav from './components/BottomNav';
 
 export default function App() {
   // ── Auth state ──────────────────────────────────────────
-  // ── Auth state ──────────────────────────────────────────
-  const [authenticated, setAuthenticated] = useState(true);
-  const [userEmail, setUserEmail] = useState('demo@moneypro.ai');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   // ── Data state ──────────────────────────────────────────
   const [expenses, setExpenses] = useState([]);
@@ -60,9 +60,17 @@ export default function App() {
     }
   }, []);
 
-  // ── Load on mount (No-Auth) ──────────────────────────────
+  // ── Check session ───────────────────────────────────────
   useEffect(() => {
-    loadData();
+    authApi.session()
+      .then((data) => {
+        if (data.status === 'authenticated') {
+          setAuthenticated(true);
+          setUserEmail(data.user?.email || '');
+          loadData();
+        }
+      })
+      .catch(() => setAuthenticated(false));
   }, [loadData]);
 
   // ── Handlers ────────────────────────────────────────────
@@ -115,7 +123,6 @@ export default function App() {
         mobileOpen={mobileOpen}
       />
 
-      {/* Mobile top bar */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999,
         display: 'none', // shown via CSS @media
@@ -125,9 +132,18 @@ export default function App() {
         backdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(0,0,0,0.05)',
       }} className="mobile-topbar">
-        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#6366f1' }}>◈</span> MoneyPro
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            className="icon-btn"
+            onClick={() => setMobileOpen(true)}
+            style={{ width: '32px', height: '32px', border: 'none', background: 'transparent' }}
+          >
+            <span style={{ fontSize: '1.2rem' }}>☰</span>
+          </button>
+          <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#6366f1' }}>◈</span> MoneyPro
+          </span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{userEmail}</span>
         </div>
@@ -158,6 +174,9 @@ export default function App() {
             budgets={budgets}
             onRefresh={loadData}
           />
+        )}
+        {page === 'circles' && (
+          <CirclesPage />
         )}
       </main>
 

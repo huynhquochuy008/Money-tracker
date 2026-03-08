@@ -10,11 +10,12 @@
  * @param {string}   props.userEmail     - logged-in user's email display
  * @param {boolean}  props.mobileOpen    - whether sidebar is open on mobile
  */
-export default function Sidebar({ activePage, onNavigate, userEmail, mobileOpen }) {
+export default function Sidebar({ activePage, onNavigate, onLogout, userEmail, mobileOpen }) {
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
         { id: 'history', label: 'Transactions', icon: '☰' },
         { id: 'settings', label: 'Budget', icon: '⚙' },
+        { id: 'circles', label: 'Circles', icon: '◈' },
     ];
 
     return (
@@ -41,12 +42,20 @@ export default function Sidebar({ activePage, onNavigate, userEmail, mobileOpen 
 
             <hr className="sidebar-divider" />
 
-            {/* User info */}
+            {/* User info & Logout */}
             <div className="sidebar-user">
                 <p style={{ fontSize: '0.72rem', color: '#475569', marginBottom: '0.3rem' }}>Account</p>
-                <p style={{ fontSize: '0.88rem', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: '0.88rem', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '1rem' }}>
                     {userEmail || 'User'}
                 </p>
+                <button
+                    className="nav-link-item danger"
+                    onClick={onLogout}
+                    style={{ padding: '0.6rem 1rem', fontSize: '0.88rem', background: 'rgba(239, 68, 68, 0.05)', color: '#ef4444' }}
+                >
+                    <span style={{ fontSize: '1rem' }}>⏻</span>
+                    Sign Out
+                </button>
             </div>
         </aside>
     );

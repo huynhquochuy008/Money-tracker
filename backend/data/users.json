@@ -1,0 +1,26 @@
+[
+    {
+        "id": "604efa47-6aeb-4303-b3d4-db6cd4589377",
+        "email": "final_e2e_test_888@example.com",
+        "password_hash": "a109e36947ad56de1dca1cc49f0ef8ac9ad9a7b1aa0df41fb3c4cb73c1ff01ea",
+        "created_at": "9348ab36-1a03-11f1-9c51-42010a800002"
+    },
+    {
+        "id": "2edd4448-2e78-4340-92e4-c35a4a45f310",
+        "email": "huyquochuynhtest@gmail.com",
+        "password_hash": "20d18a97b1e24df04c0129e067b5b28ba835eec9cb2b0ffc0801fae65a1297bc",
+        "created_at": "4f98beaa-1a06-11f1-9c51-42010a800002"
+    },
+    {
+        "id": "247c4204-893a-4e49-a319-51dc966e48fa",
+        "email": "huyquochuynh009@gmail.com",
+        "password_hash": "20d18a97b1e24df04c0129e067b5b28ba835eec9cb2b0ffc0801fae65a1297bc",
+        "created_at": "08d71572-1a09-11f1-9c51-42010a800002"
+    },
+    {
+        "id": "62155077-5608-4aad-be96-10d1651fe086",
+        "email": "recovered1@example.com",
+        "password_hash": "ac5bba184d503eb8fb1372236a6bd494fb1b3f990067a2bcdf5a0a1d16b59709",
+        "created_at": "c29ff9e2-1a0e-11f1-9c51-42010a800002"
+    }
+]

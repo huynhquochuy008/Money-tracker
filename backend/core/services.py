@@ -21,9 +21,9 @@ class MoneyService:
         self.storage = storage
 
     # --- EXPENSE OPS ---
-    def get_expenses(self, month: Optional[str] = None) -> List[Dict]:
+    def get_expenses(self, month: Optional[str] = None, user_id: Optional[str] = None) -> List[Dict]:
         self.process_recurring_expenses()
-        return self.storage.get_expenses(month)
+        return self.storage.get_expenses(month, user_id=user_id)
 
     def add_expense(self, amount: int, category: str, note: str, date: str, is_recurring: bool = False, recurrence_interval: Optional[str] = None) -> Dict:
         date_str = date or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -36,8 +36,8 @@ class MoneyService:
         return self.storage.delete_expense(expense_id)
 
     # --- BUDGET OPS ---
-    def get_budget(self) -> Dict:
-        return self.storage.get_budget()
+    def get_budget(self, user_id: Optional[str] = None) -> Dict:
+        return self.storage.get_budget(user_id=user_id)
 
     def update_budget(self, new_budget: Dict):
         self.storage.update_budget(new_budget)
@@ -46,7 +46,7 @@ class MoneyService:
         self.storage.delete_budget_category(category)
 
     # --- SUMMARY OPS ---
-    def get_summary(self) -> Dict[str, int]:
+    def get_summary(self, user_id: Optional[str] = None) -> Dict[str, int]:
         """
         Calculate summary totals for day, week, month, and year.
         Periods are calculated relative to the local time.
@@ -61,7 +61,7 @@ class MoneyService:
         start_of_week_str = start_of_week.strftime("%Y-%m-%d")
 
         # Fetch all expenses for the current year to calculate all totals
-        all_expenses = self.storage.get_expenses(year_str)
+        all_expenses = self.storage.get_expenses(year_str, user_id=user_id)
 
         summary = {
             "day": 0,

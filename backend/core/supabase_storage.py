@@ -77,9 +77,9 @@ class SupabaseStorage:
             # Don't re-raise if it's just a connection blip during startup
             # but for debug we print it.
 
-    def get_expenses(self, month: Optional[str] = None) -> List[Dict]:
-        user_id = self.get_user_id()
-        query = self.client.table('expenses').select('*').eq('user_id', user_id)
+    def get_expenses(self, month: Optional[str] = None, user_id: Optional[str] = None) -> List[Dict]:
+        uid = user_id or self.get_user_id()
+        query = self.client.table('expenses').select('*').eq('user_id', uid)
         if month:
             query = query.like('date', f'{month}%')
         
@@ -148,9 +148,9 @@ class SupabaseStorage:
         return len(result.data) > 0
 
     # --- BUDGET ---
-    def get_budget(self) -> Dict:
-        user_id = self.get_user_id()
-        result = self.client.table('budget').select('*').eq('user_id', user_id).execute()
+    def get_budget(self, user_id: Optional[str] = None) -> Dict:
+        uid = user_id or self.get_user_id()
+        result = self.client.table('budget').select('*').eq('user_id', uid).execute()
         return {item['category']: item['limit_amount'] for item in result.data}
 
     def update_budget(self, new_budget: Dict):

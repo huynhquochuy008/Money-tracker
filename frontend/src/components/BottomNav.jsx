@@ -16,7 +16,7 @@ export default function BottomNav({ activePage, onNavigate, onAdd }) {
         { id: 'history', label: 'History', icon: '🧾' },
         { id: 'spacer', label: '', icon: '' }, // Spacer for the FAB
         { id: 'settings', label: 'Budget', icon: '📊' },
-        { id: 'profile', label: 'Profile', icon: '👤' },
+        { id: 'circles', label: 'Circles', icon: '◈' },
     ];
 
     return (

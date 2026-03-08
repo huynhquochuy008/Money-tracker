@@ -10,37 +10,45 @@ import { authApi } from '../api/moneyApi';
  * @param {Function} props.onAuthenticated - callback when login/signup succeeds
  */
 export default function AuthOverlay({ onAuthenticated }) {
-    const [isSignup, setIsSignup] = useState(false);
+    const [mode, setMode] = useState('login'); // 'login', 'signup', 'recover'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [uid, setUid] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
 
-    /** Toggle between login and signup mode */
-    const toggleMode = (e) => {
-        e.preventDefault();
-        setIsSignup((prev) => !prev);
+    /** Switch between modes */
+    const switchMode = (newMode) => {
+        setMode(newMode);
         setError('');
+        setSuccess('');
     };
 
-    /** Handle form submission for login or signup */
+    /** Handle form submission for login, signup, or recovery */
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
 
-        if (isSignup && password !== confirmPassword) {
+        if (mode === 'signup' && password !== confirmPassword) {
             setError('Passwords do not match.');
             return;
         }
 
         setLoading(true);
         try {
-            if (isSignup) {
+            if (mode === 'signup') {
                 await authApi.signup(email, password);
-                setError('');
-                alert('Account created! Please check your email to verify.');
-                setIsSignup(false);
+                setMode('login');
+                setEmail(email);
+                setPassword('');
+                setSuccess('Account created! You can now sign in.');
+            } else if (mode === 'recover') {
+                await authApi.recover(uid, email, password);
+                setMode('login');
+                setSuccess('Account recovered! Please sign in with your new credentials.');
             } else {
                 await authApi.login(email, password);
                 onAuthenticated();
@@ -53,37 +61,65 @@ export default function AuthOverlay({ onAuthenticated }) {
     };
 
     return (
-        <div className="auth-overlay">
-            <div className="auth-card">
+        <div className="auth-overlay animate-fade-in">
+            <div id="authCard" className={`auth-card auth-glass animate-slide-up ${error ? 'shake' : ''}`}>
                 {/* Brand */}
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
                     <div style={{
-                        fontSize: '1.75rem', fontWeight: 700,
-                        background: 'linear-gradient(135deg, #fff 0%, #818cf8 100%)',
-                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                        fontSize: '2rem', fontWeight: 800,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
                         marginBottom: '0.75rem',
+                        letterSpacing: '-0.02em'
                     }}>
-                        <span style={{ WebkitTextFillColor: '#6366f1' }}>◈</span>
-                        MoneyPro
+                        <span style={{
+                            color: '#6366f1',
+                            fontSize: '2.5rem',
+                            textShadow: '0 0 20px rgba(99, 102, 241, 0.3)'
+                        }}>◈</span>
+                        <span style={{
+                            background: 'linear-gradient(135deg, #1e293b 0%, #64748b 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent'
+                        }}>MoneyPro</span>
                     </div>
-                    <h2 style={{ fontSize: '1.4rem', marginBottom: '0.35rem' }}>
-                        {isSignup ? 'Create Account' : 'Welcome back'}
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>
+                        {mode === 'signup' ? 'Create Account' : mode === 'recover' ? 'Recover Account' : 'Welcome back'}
                     </h2>
-                    <p className="text-muted small">
-                        {isSignup
-                            ? 'Start your financial journey today'
-                            : 'Sign in to manage your finances'}
+                    <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>
+                        {mode === 'signup'
+                            ? 'Join thousands managing wealth better'
+                            : mode === 'recover'
+                                ? 'Reset credentials using your UID'
+                                : 'Sign in to continue your progress'}
                     </p>
                 </div>
 
-                {/* Error */}
-                {error && <div className="auth-alert">{error}</div>}
+                {/* Messages */}
+                {error && <div className="auth-alert animate-fade-in">{error}</div>}
+                {success && <div className="auth-alert animate-fade-in" style={{ borderColor: '#22c55e', color: '#15803d', background: 'rgba(34, 197, 94, 0.1)' }}>{success}</div>}
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    {/* UID (Recovery only) */}
+                    {mode === 'recover' && (
+                        <div className="animate-fade-in">
+                            <label className="auth-label" htmlFor="authUid">Recovery UID</label>
+                            <input
+                                id="authUid"
+                                type="text"
+                                className="auth-input"
+                                placeholder="247c4204-..."
+                                value={uid}
+                                onChange={(e) => setUid(e.target.value)}
+                                required
+                            />
+                        </div>
+                    )}
+
                     {/* Email */}
-                    <div style={{ marginBottom: '1.25rem' }}>
-                        <label className="auth-label">Email</label>
+                    <div>
+                        <label className="auth-label" htmlFor="authEmail">
+                            {mode === 'recover' ? 'New Email Address' : 'Email Address'}
+                        </label>
                         <input
                             id="authEmail"
                             type="email"
@@ -96,8 +132,10 @@ export default function AuthOverlay({ onAuthenticated }) {
                     </div>
 
                     {/* Password */}
-                    <div style={{ marginBottom: '1.25rem' }}>
-                        <label className="auth-label">Password</label>
+                    <div>
+                        <label className="auth-label" htmlFor="authPassword">
+                            {mode === 'recover' ? 'New Password' : 'Password'}
+                        </label>
                         <input
                             id="authPassword"
                             type="password"
@@ -110,9 +148,9 @@ export default function AuthOverlay({ onAuthenticated }) {
                     </div>
 
                     {/* Confirm password (signup only) */}
-                    {isSignup && (
-                        <div style={{ marginBottom: '1.25rem' }}>
-                            <label className="auth-label">Confirm Password</label>
+                    {mode === 'signup' && (
+                        <div className="animate-fade-in">
+                            <label className="auth-label" htmlFor="authConfirmPassword">Confirm Password</label>
                             <input
                                 id="authConfirmPassword"
                                 type="password"
@@ -120,32 +158,82 @@ export default function AuthOverlay({ onAuthenticated }) {
                                 placeholder="••••••••"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
                             />
                         </div>
                     )}
 
-                    <button
-                        id="authSubmitBtn"
-                        type="submit"
-                        className="btn-premium"
-                        disabled={loading}
-                        style={{ width: '100%', padding: '0.9rem', fontSize: '1.05rem', marginBottom: '1.25rem', justifyContent: 'center' }}
-                    >
-                        {loading ? 'Please wait…' : isSignup ? 'Sign Up' : 'Sign In'}
-                    </button>
-
-                    <p style={{ textAlign: 'center', fontSize: '0.88rem', color: '#64748b' }}>
-                        {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
-                        <a
-                            href="#"
-                            onClick={toggleMode}
-                            style={{ color: '#6366f1', fontWeight: 600, textDecoration: 'none' }}
+                    <div style={{ marginTop: '0.5rem' }}>
+                        <button
+                            id="authSubmitBtn"
+                            type="submit"
+                            className="btn-premium"
+                            disabled={loading}
+                            style={{
+                                width: '100%',
+                                padding: '1rem',
+                                fontSize: '1.1rem',
+                                justifyContent: 'center',
+                                borderRadius: '16px'
+                            }}
                         >
-                            {isSignup ? 'Sign in' : 'Sign up'}
-                        </a>
-                    </p>
+                            {loading ? (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }}></span>
+                                    Processing...
+                                </span>
+                            ) : mode === 'signup' ? 'Create Account' : mode === 'recover' ? 'Reset Credentials' : 'Sign In'}
+                        </button>
+                    </div>
+
+                    <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                            {mode === 'signup' ? 'Already have an account?' : mode === 'recover' ? 'Remembered your details?' : "New to MoneyPro?"}{' '}
+                            <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); switchMode(mode === 'signup' || mode === 'recover' ? 'login' : 'signup'); }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#6366f1',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    fontSize: '0.9rem',
+                                    marginLeft: '4px'
+                                }}
+                            >
+                                {mode === 'signup' || mode === 'recover' ? 'Sign in' : 'Create one now'}
+                            </button>
+                        </p>
+
+                        {mode === 'login' && (
+                            <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); switchMode('recover'); }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#64748b',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    fontSize: '0.85rem',
+                                    textDecoration: 'underline'
+                                }}
+                            >
+                                Forgot email or password? Recover with UID
+                            </button>
+                        )}
+                    </div>
                 </form>
             </div>
+
+            <style>{`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 }

@@ -1,0 +1,65 @@
+[
+    {
+        "id": "b464c0a0-87bb-4cb5-aa43-e0834659215f",
+        "owner_id": "604efa47-6aeb-4303-b3d4-db6cd4589377",
+        "name": "Success Lab",
+        "members": [
+            {
+                "email": "collaborator@example.com",
+                "permissions": {
+                    "share_transactions": true,
+                    "share_budget": true
+                }
+            },
+            {
+                "email": "final_e2e_test_888@example.com",
+                "permissions": {
+                    "share_transactions": true,
+                    "share_budget": true
+                }
+            }
+        ]
+    },
+    {
+        "id": "a75d0540-ad29-4596-8b4d-6ffb1b35446c",
+        "owner_id": "2edd4448-2e78-4340-92e4-c35a4a45f310",
+        "name": "family",
+        "members": [
+            {
+                "email": "recovered@example.com",
+                "permissions": {
+                    "share_transactions": true,
+                    "share_budget": true
+                }
+            },
+            {
+                "email": "recovered1@example.com",
+                "permissions": {
+                    "share_transactions": true,
+                    "share_budget": true
+                }
+            }
+        ]
+    },
+    {
+        "id": "32ad2c2c-e64c-4182-81a3-9adaadd00ee2",
+        "owner_id": "247c4204-893a-4e49-a319-51dc966e48fa",
+        "name": "Alpha Circle",
+        "members": [
+            {
+                "email": "recovered1@example.com",
+                "status": "accepted",
+                "permissions": {
+                    "share_transactions": true,
+                    "share_budget": true
+                }
+            }
+        ]
+    },
+    {
+        "id": "f2d2deb6-f53e-49e8-9d3e-0ea63dfdea6e",
+        "owner_id": "247c4204-893a-4e49-a319-51dc966e48fa",
+        "name": "Integration Test Circle",
+        "members": []
+    }
+]

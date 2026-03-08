@@ -20,7 +20,7 @@ def test_get_expenses_table(service, mock_storage, month, expected_data):
     result = service.get_expenses(month)
     assert result == expected_data
     # It's called twice now: once by process_recurring_expenses (no args) and once by get_expenses(month)
-    mock_storage.get_expenses.assert_any_call(month)
+    mock_storage.get_expenses.assert_any_call(month, user_id=None)
 
 @pytest.mark.parametrize("amount, category, note, date, expected_res", [
     (100, "Food", "Dinner", "2024-03-01", {"id": 1, "amount": 100}),
@@ -64,6 +64,7 @@ def test_budget_ops_table(service, mock_storage, budget_data):
     # Test Get
     mock_storage.get_budget.return_value = budget_data
     assert service.get_budget() == budget_data
+    mock_storage.get_budget.assert_called_with(user_id=None)
     
     # Test Update
     service.update_budget(budget_data)

@@ -2,6 +2,7 @@
  * Dashboard.jsx — Overview page with stats, budget summary, and charts.
  */
 import Charts from './Charts';
+import Calendar from './Calendar';
 
 /**
  * @param {Object}   props
@@ -74,13 +75,17 @@ export default function Dashboard({ expenses, budgets, summary, month, months, o
 
             <div className="dashboard-main-grid">
                 <div className="dashboard-left-content">
+                    {/* Calendar with daily totals (TODO #16) */}
+                    <Calendar expenses={expenses} month={month} />
+
                     {/* Today's Spending Table (Scrollable - TODO #14) */}
-                    <div className="glass-card daily-spending-card">
+                    <div className="glass-card daily-spending-card" style={{ marginTop: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                             <h5 style={{ color: 'var(--text-main)', fontSize: '1.1rem', fontWeight: 600 }}>Today's Spending</h5>
                             <span className="text-muted small">{todayExpenses.length} items</span>
                         </div>
                         <div className="scroll-container">
+
                             {todayExpenses.length === 0 ? (
                                 <p className="text-muted" style={{ textAlign: 'center', padding: '2rem 0' }}>No spending today yet.</p>
                             ) : (

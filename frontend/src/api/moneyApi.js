@@ -36,13 +36,56 @@ export const authApi = {
     login: (email, password) => post('/auth/login', { email, password }),
 
     /** Register with email + password */
-    signup: (email, password) => post('/auth/signup', { email, password }),
+    signup: (email, password) => post('/auth/register', { email, password }),
 
     /** Logout */
     logout: async () => {
         const res = await fetch(`${BASE}/auth/session`, { method: 'DELETE' });
         return res.json();
     },
+
+    /** Recover/Reset credentials by UID */
+    recover: (userId, email, password) => post('/auth/recover', { user_id: userId, email, password }),
+
+    /** Sync from Supabase to Local */
+    syncFromCloud: () => post('/sync/supabase', {}),
+};
+
+// ── Circles ──────────────────────────────────────────────
+export const circlesApi = {
+    /** List circles I own */
+    listMine: () => get('/circles/mine'),
+
+    /** List people who shared with me */
+    listShared: () => get('/circles/shared-with-me'),
+
+    /** List pending invitations */
+    listPending: () => get('/circles/pending'),
+
+    /** Create a new circle */
+    create: (name) => post('/circles/mine', { name }),
+
+    /** Invite someone to watch you */
+    invite: (circleId, email, shareTransactions, shareBudget) =>
+        post('/circles/invite', {
+            circle_id: circleId,
+            email,
+            share_transactions: shareTransactions,
+            share_budget: shareBudget
+        }),
+
+    /** Respond to an invitation (accept or deny) */
+    respond: (circleId, response) =>
+        post('/circles/respond', { circle_id: circleId, response }),
+
+    /** Update existing member permissions */
+    updatePermissions: (circleId, email, shareTx, shareBg) =>
+        post('/circles/permissions', {
+            circle_id: circleId,
+            email,
+            share_transactions: shareTx,
+            share_budget: shareBg
+        }),
 };
 
 // ── Expenses ─────────────────────────────────────────────
@@ -68,11 +111,21 @@ export const expenseApi = {
 // ── Budget ───────────────────────────────────────────────
 export const budgetApi = {
     /** Fetch budget config { category: limit } */
-    get: () => get('/budget'),
+    get: (userId) => get(`/budget${userId ? `?user_id=${userId}` : ''}`),
 
     /** Upsert budget categories */
     update: (budgetObj) => post('/budget/update', budgetObj),
 
     /** Delete a single budget category */
     deleteCategory: (category) => post('/budget/delete', { category }),
+};
+
+// ── Watch ────────────────────────────────────────────────
+export const watchApi = {
+    /** Get shared summary */
+    getSummary: (userId) => get(`/watch/summary?user_id=${userId}`),
+
+    /** Get shared expenses */
+    getExpenses: (userId, month) =>
+        get(`/watch/expenses?user_id=${userId}${month ? `&month=${month}` : ''}`),
 };

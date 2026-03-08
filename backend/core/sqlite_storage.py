@@ -39,9 +39,10 @@ class SQLiteStorage:
     def set_user_id(self, user_id: str):
         self._user_id = user_id
 
-    def get_expenses(self, month: Optional[str] = None) -> List[Dict]:
+    def get_expenses(self, month: Optional[str] = None, user_id: Optional[str] = None) -> List[Dict]:
+        uid = user_id or self._user_id
         query = "SELECT * FROM expenses WHERE user_id = ?"
-        params = [self._user_id]
+        params = [uid]
         if month:
             query += " AND date LIKE ?"
             params.append(f"{month}%")
@@ -85,9 +86,10 @@ class SQLiteStorage:
         self._conn.commit()
         return cursor.rowcount > 0
 
-    def get_budget(self) -> Dict:
+    def get_budget(self, user_id: Optional[str] = None) -> Dict:
+        uid = user_id or self._user_id
         self._conn.row_factory = sqlite3.Row
-        rows = self._conn.execute("SELECT category, limit_amount FROM budget WHERE user_id = ?", (self._user_id,)).fetchall()
+        rows = self._conn.execute("SELECT category, limit_amount FROM budget WHERE user_id = ?", (uid,)).fetchall()
         return {row['category']: row['limit_amount'] for row in rows}
 
     def update_budget(self, new_budget: Dict):
